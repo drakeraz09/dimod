@@ -229,10 +229,12 @@ const collabAvatarDot = {
     boxSizing: 'border-box',
     objectFit: 'cover',
     background: '#222',
+    filter: 'none',
     marginLeft: -6,
     flexShrink: 0
 };
 const avatarSrc = u => u.avatarUrl || getDefaultPfp(u.username || '');
+const avatarFail = u => e => { const d = getDefaultPfp(u.username || ''); if (e.currentTarget.src !== d) e.currentTarget.src = d; };
 const membersModalRow = {display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.35rem 0'};
 const membersModalAvatar = {
     width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
@@ -1906,6 +1908,7 @@ class DimodToolbar extends React.Component {
                                     <img
                                         key={u.userId + i}
                                         src={avatarSrc(u)}
+                                        onError={avatarFail(u)}
                                         alt={u.username}
                                         title={u.username}
                                         draggable={false}
@@ -1938,6 +1941,7 @@ class DimodToolbar extends React.Component {
                             <div key={u.userId + i} style={membersModalRow}>
                                 <img
                                     src={avatarSrc(u)}
+                                    onError={avatarFail(u)}
                                     alt=""
                                     draggable={false}
                                     style={{...membersModalAvatar, borderColor: color}}

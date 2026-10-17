@@ -1,5 +1,5 @@
 import DOMPurify from 'dompurify';
-import {getDimodUserId} from './dimod-project';
+import {getDimodUserId, isApplyingRemote} from './dimod-project';
 import Comment from 'scratch-vm/src/engine/comment';
 import log from './log.js';
 import {kindOfExt} from './dimod-scenes';
@@ -1194,6 +1194,319 @@ const installFieldCarets = Blocks => {
     attachCollab();
     window.addEventListener('dimod:collab-ready', attachCollab);
 };
+const CMT_MAX = 8000;
+const CMT_SESSION = `c${sessionId}`;
+const BC_KEYS = ['color', 'color2', 'opacity', 'txtColor', 'font', 'textAlign', 'fontSize', 'bold', 'italic'];
+const cmt = {vm: null, typedAt: 0, mine: null, sentAt: 0, timer: null, beat: null, shared: false, remotes: new Map(), raf: null, bcSeen: new Map(), bcTimer: null};
+const cmtSpot = () => {
+    const scope = scopes.get('code');
+    const ws = scope && scope.getWorkspace();
+    return ws ? {ws, targetId: scope.getTargetId()} : null;
+};
+const cmtOf = el => {
+    const spot = cmtSpot();
+    if (!spot || !el) return null;
+    const db = spot.ws.commentDB_ || {};
+    for (const id in db) if (db[id] && db[id].textarea_ === el) return db[id];
+    return null;
+};
+const cmtTyping = () => Date.now() - cmt.typedAt < TYPING_MS;
+const putText = (ta, text) => {
+    const old = ta.value;
+    if (old === text) return;
+    const focused = document.activeElement === ta;
+    const s = ta.selectionStart, e = ta.selectionEnd, top = ta.scrollTop;
+    let p = 0;
+    while (p < old.length && p < text.length && old[p] === text[p]) p++;
+    let q = 0;
+    while (q < old.length - p && q < text.length - p && old[old.length - 1 - q] === text[text.length - 1 - q]) q++;
+    const map = i => (i <= p ? i : i >= old.length - q ? i + text.length - old.length : text.length - q);
+    ta.value = text;
+    if (focused) ta.setSelectionRange(map(s), map(e));
+    ta.scrollTop = top;
+};
+const span = (a, b) => {
+    let p = 0;
+    while (p < a.length && p < b.length && a[p] === b[p]) p++;
+    let q = 0;
+    while (q < a.length - p && q < b.length - p && a[a.length - 1 - q] === b[b.length - 1 - q]) q++;
+    return {p, end: a.length - q, ins: b.slice(p, b.length - q)};
+};
+const merge3 = (base, mine, theirs) => {
+    if (theirs === mine || theirs === base) return mine;
+    if (mine === base) return theirs;
+    const mt = span(mine, theirs);
+    if (mt.end === mt.p) return theirs;
+    const tm = span(theirs, mine);
+    if (tm.end === tm.p) return mine;
+    let x = span(base, mine), y = span(base, theirs);
+    if (y.p < x.p || (y.p === x.p && y.end === y.p && x.end === x.p && y.ins < x.ins)) [x, y] = [y, x];
+    if (x.end > y.p) return mine;
+    return base.slice(0, x.p) + x.ins + base.slice(x.end, y.p) + y.ins + base.slice(y.end);
+};
+const cmtTake = (ta, text) => {
+    const base = typeof ta.__base === 'string' ? ta.__base : ta.value;
+    ta.__pend = null;
+    putText(ta, merge3(base, ta.value, text));
+    ta.__base = text;
+};
+const bcListener = ws => (ws.listeners_ || []).find(f => String(f).includes('commentListener'));
+const bcRefresh = (ws, id) => {
+    const fn = bcListener(ws);
+    if (!fn || !ScratchBlocks) return;
+    try { fn({type: ScratchBlocks.Events.COMMENT_CREATE, workspaceId: ws.id, commentId: id, xy: {x: NaN, y: NaN}}); } catch (e) {
+    }
+};
+const cmtSend = () => {
+    clearTimeout(cmt.timer);
+    cmt.timer = null;
+    const collab = window.dimodCollab;
+    const c = cmt.mine;
+    const spot = cmtSpot();
+    if (!collab || !c || !c.textarea_ || !spot) return;
+    const ta = c.textarea_;
+    cmt.sentAt = Date.now();
+    const text = ta.value.slice(0, CMT_MAX);
+    if (typeof ta.__pend !== 'string' && ![...cmt.remotes.values()].some(r => r.comment === c.id && Date.now() - r.typingAt < TYPING_MS)) ta.__base = text;
+    collab.send('field-caret', {session: CMT_SESSION, open: true, comment: c.id, targetId: spot.targetId, text,
+        start: Math.min(ta.selectionStart || 0, text.length), end: Math.min(ta.selectionEnd || 0, text.length), typing: cmtTyping()});
+    cmt.shared = true;
+};
+const cmtSoon = () => {
+    if (!cmt.timer) cmt.timer = setTimeout(cmtSend, Math.max(0, SEND_THROTTLE_MS - (Date.now() - cmt.sentAt)));
+};
+const cmtStop = () => {
+    clearTimeout(cmt.timer);
+    clearInterval(cmt.beat);
+    cmt.timer = cmt.beat = cmt.mine = null;
+    if (cmt.shared && window.dimodCollab) window.dimodCollab.send('field-caret', {session: CMT_SESSION, open: false});
+    cmt.shared = false;
+};
+const cmtGone = key => {
+    const r = cmt.remotes.get(key);
+    if (r) r.clip.remove();
+    cmt.remotes.delete(key);
+};
+const cmtMake = msg => {
+    const color = colorForUserId(msg.from);
+    const clip = document.createElement('div');
+    clip.className = styles.clip;
+    const box = document.createElement('div');
+    box.style.cssText = 'position:absolute;top:0;left:0;transform-origin:0 0;white-space:pre-wrap;overflow-wrap:break-word;overflow:hidden;color:transparent;box-sizing:border-box';
+    box.className = styles.editor;
+    box.style.setProperty('--caret-color', color);
+    box.style.setProperty('--caret-text-color', contrastTextColor(color));
+    const flag = document.createElement('div');
+    flag.className = styles.flag;
+    const name = document.createElement('span');
+    name.textContent = typeof msg.fromUsername === 'string' ? msg.fromUsername : 'someone';
+    const dots = document.createElement('span');
+    dots.className = styles.dots;
+    dots.append(document.createElement('span'), document.createElement('span'), document.createElement('span'));
+    flag.append(name, dots);
+    const pin = document.createElement('div');
+    pin.className = styles.editor;
+    pin.style.setProperty('--caret-color', color);
+    pin.style.setProperty('--caret-text-color', contrastTextColor(color));
+    flag.style.bottom = '0';
+    pin.appendChild(flag);
+    clip.append(box, pin);
+    document.body.appendChild(clip);
+    return {clip, box, pin, typingAt: 0, drawn: null};
+};
+const cmtDraw = r => {
+    const key = `${r.start}:${r.end}:${r.text}`;
+    if (r.drawn === key) return;
+    r.drawn = key;
+    const [a, b] = r.start <= r.end ? [r.start, r.end] : [r.end, r.start];
+    const sel = document.createElement('span');
+    sel.className = styles.selection;
+    sel.textContent = r.text.slice(a, b);
+    const caret = document.createElement('span');
+    caret.className = styles.caret;
+    r.caret = caret;
+    r.box.replaceChildren(r.text.slice(0, a), sel, caret, `${r.text.slice(b)}\n`);
+};
+const cmtFrame = () => {
+    cmt.raf = null;
+    const now = Date.now();
+    const spot = cmtSpot();
+    cmt.remotes.forEach((r, key) => {
+        if (now - r.seenAt > STALE_MS) { cmtGone(key); return; }
+        const c = spot && (r.targetId || null) === (spot.targetId || null) && (spot.ws.commentDB_ || {})[r.comment];
+        const ta = c && c.textarea_;
+        const el = ta && (ta.offsetWidth ? ta : ta.previousElementSibling);
+        const svg = spot && spot.ws.getParentSvg && spot.ws.getParentSvg();
+        const area = svg && svg.getBoundingClientRect();
+        const rect = el && el.getBoundingClientRect();
+        if (!rect || !rect.width || !el.offsetWidth || !area || !area.width) { r.clip.style.display = 'none'; return; }
+        const cs = getComputedStyle(ta.offsetWidth ? ta : el);
+        const clip = r.clip.style;
+        clip.display = '';
+        clip.left = `${area.left}px`;
+        clip.top = `${area.top}px`;
+        clip.width = `${area.width}px`;
+        clip.height = `${area.height}px`;
+        const box = r.box.style;
+        box.width = `${el.offsetWidth}px`;
+        box.height = `${el.offsetHeight}px`;
+        ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textAlign', 'paddingTop', 'paddingLeft', 'paddingRight', 'paddingBottom',
+            'borderTopWidth', 'borderLeftWidth', 'borderRightWidth', 'borderBottomWidth'].forEach(k => { box[k] = cs[k]; });
+        box.borderStyle = 'solid';
+        box.borderColor = 'transparent';
+        box.transform = `translate(${rect.left - area.left}px, ${rect.top - area.top}px) scale(${rect.width / el.offsetWidth})`;
+        cmtDraw(r);
+        r.box.scrollTop = el.scrollTop;
+        const cr = r.caret.getBoundingClientRect();
+        const inside = cr.bottom > rect.top && cr.top < rect.bottom;
+        r.pin.style.display = inside ? '' : 'none';
+        r.pin.style.transform = `translate(${cr.left - area.left}px, ${cr.top - area.top}px)`;
+        r.box.classList.toggle(styles.typing, now - r.typingAt < TYPING_MS);
+        r.pin.classList.toggle(styles.typing, now - r.typingAt < TYPING_MS);
+    });
+    if (cmt.remotes.size) cmt.raf = requestAnimationFrame(cmtFrame);
+};
+const cmtMessage = msg => {
+    if (msg.type === 'joined' || msg.type === 'presence') {
+        if (cmt.mine) cmtSoon();
+        if (msg.type === 'presence' && Array.isArray(msg.users)) {
+            const here = new Set(msg.users.map(u => u && u.userId));
+            [...cmt.remotes.keys()].forEach(key => { if (!here.has(key.slice(0, key.lastIndexOf(':')))) cmtGone(key); });
+        }
+        return;
+    }
+    if (msg.type === 'extension-data' && msg.scope === 'spcomments') { bcApply(msg); return; }
+    if (msg.type !== 'field-caret' || !msg.from || typeof msg.session !== 'string') return;
+    const key = `${msg.from}:${msg.session}`;
+    if (!msg.open) { cmtGone(key); return; }
+    if (typeof msg.comment !== 'string' || typeof msg.text !== 'string') return;
+    const text = msg.text.slice(0, CMT_MAX);
+    const spot = cmtSpot();
+    const c = spot && (typeof msg.targetId === 'string' ? msg.targetId : null) === (spot.targetId || null) && (spot.ws.commentDB_ || {})[msg.comment];
+    if (c && c.textarea_ && c.textarea_.value === text) {
+        c.textarea_.__pend = null;
+        c.textarea_.__base = text;
+    } else if (c && c.textarea_) {
+        const ta = c.textarea_;
+        const focused = document.activeElement === ta;
+        if (focused && cmtTyping()) ta.__pend = text;
+        else if (focused) cmtTake(ta, text);
+        else {
+            putText(ta, text);
+            ta.__base = text;
+            bcRefresh(spot.ws, c.id);
+        }
+    }
+    let r = cmt.remotes.get(key);
+    if (!r) { r = cmtMake(msg); cmt.remotes.set(key, r); }
+    const clamp = n => (Number.isInteger(n) ? Math.max(0, Math.min(text.length, n)) : text.length);
+    Object.assign(r, {comment: msg.comment, targetId: typeof msg.targetId === 'string' ? msg.targetId : null, text, start: clamp(msg.start), end: clamp(msg.end), seenAt: Date.now()});
+    if (msg.typing) r.typingAt = r.seenAt;
+    if (!cmt.raf) cmt.raf = requestAnimationFrame(cmtFrame);
+};
+const bcStore = () => {
+    const ext = cmt.vm && cmt.vm.runtime.ext_SPcomments;
+    try { return ext ? ext.serialize().SPcomments.storage : null; } catch (e) { return null; }
+};
+const bcPick = d => {
+    const o = {};
+    BC_KEYS.forEach(k => { if (d && d[k] !== undefined) o[k] = d[k]; });
+    return o;
+};
+const bcPoll = () => {
+    const store = bcStore();
+    const spot = cmtSpot();
+    if (!store || !spot) return;
+    for (const id in store) {
+        const json = JSON.stringify(bcPick(store[id]));
+        const was = cmt.bcSeen.get(id);
+        cmt.bcSeen.set(id, json);
+        if (was === undefined || was === json || !window.dimodCollab) continue;
+        window.dimodCollab.send('extension-data', {scope: 'spcomments', targetId: null, key: id, value: JSON.parse(json)});
+        cmt.vm.runtime.emitProjectChanged();
+    }
+};
+const bcApply = msg => {
+    const store = bcStore();
+    const spot = cmtSpot();
+    if (!store || !spot || typeof msg.key !== 'string' || !msg.value || typeof msg.value !== 'object') return;
+    const style = bcPick(msg.value);
+    const c = (spot.ws.commentDB_ || {})[msg.key];
+    store[msg.key] = {...(store[msg.key] || {ID: msg.key, XY: c ? c.getXY() : {x: 0, y: 0}}), ...style};
+    cmt.bcSeen.set(msg.key, JSON.stringify(bcPick(store[msg.key])));
+    if (c && document.activeElement !== c.textarea_) bcRefresh(spot.ws, msg.key);
+};
+const keepTyping = original => function (text) {
+    const ta = this.textarea_;
+    const mine = ta && document.activeElement === ta && isApplyingRemote() ? [ta.value, ta.selectionStart, ta.selectionEnd, ta.scrollTop] : null;
+    original.call(this, text);
+    if (!mine) return;
+    ta.value = mine[0];
+    ta.setSelectionRange(mine[1], mine[2]);
+    ta.scrollTop = mine[3];
+    if (cmtTyping()) ta.__pend = String(text);
+    else cmtTake(ta, String(text));
+    const sel = [ta.selectionStart, ta.selectionEnd];
+    setTimeout(() => {
+        const pre = ta.previousElementSibling;
+        if (pre && pre.tagName === 'PRE') pre.remove();
+        ta.style.display = '';
+        if (document.activeElement === ta) return;
+        ta.focus();
+        ta.setSelectionRange(sel[0], sel[1]);
+    }, 0);
+};
+const installCommentCollab = (Blocks, vm) => {
+    if (!Blocks || Blocks.__dimodCommentCollab) return;
+    Blocks.__dimodCommentCollab = true;
+    ScratchBlocks = Blocks;
+    cmt.vm = vm;
+    [Blocks.WorkspaceCommentSvg, Blocks.ScratchBlockComment].forEach(K => {
+        if (K && K.prototype.setText) K.prototype.setText = keepTyping(K.prototype.setText);
+    });
+    const isCmt = el => el && el.tagName === 'TEXTAREA' && el.classList.contains('scratchCommentTextarea');
+    const onAny = e => {
+        if (!isCmt(e.target)) return;
+        if (e.type === 'focusout') {
+            const c = cmt.mine;
+            if (!c || c.textarea_ !== e.target) return;
+            if (typeof e.target.__pend === 'string') {
+                const ta = e.target;
+                cmtTake(ta, ta.__pend);
+                setTimeout(() => { if ((c.block_ ? c.text_ : c.content_) !== ta.value) c.setText(ta.value); }, 30);
+            }
+            cmtStop();
+            return;
+        }
+        if (e.type === 'focusin') e.target.__base = e.target.value;
+        if (e.type === 'input') cmt.typedAt = Date.now();
+        if (!cmt.mine || cmt.mine.textarea_ !== e.target) {
+            const c = cmtOf(e.target);
+            if (!c) return;
+            cmtStop();
+            cmt.mine = c;
+            cmt.beat = setInterval(cmtSend, 3000);
+        }
+        cmtSoon();
+    };
+    ['input', 'keyup', 'mouseup', 'select', 'focusin', 'focusout'].forEach(t => document.addEventListener(t, onAny, true));
+    const attach = () => {
+        const collab = window.dimodCollab;
+        if (!collab || collab.__dimodCmt) return;
+        collab.__dimodCmt = true;
+        collab.addMessageListener(cmtMessage);
+    };
+    attach();
+    window.addEventListener('dimod:collab-ready', attach);
+    cmt.bcTimer = setInterval(bcPoll, 500);
+    setInterval(() => {
+        const ta = cmt.mine && cmt.mine.textarea_;
+        if (ta && typeof ta.__pend === 'string' && !cmtTyping()) {
+            cmtTake(ta, ta.__pend);
+            cmtSoon();
+        }
+    }, 250);
+};
 const gestureWorkspaces = workspace => {
     const list = [workspace];
     const flyout = workspace.getFlyout && workspace.getFlyout();
@@ -2065,4 +2378,4 @@ const installScenesCollab = vm => {
     if (!scenesCollab && vm.dimodScenes && vm.dimodAssets && typeof window !== 'undefined') { scenesCollab = new ScenesAssetsCollab(vm); window.dimodScenesCollab = scenesCollab; }
     return scenesCollab;
 };
-export {ScenesAssetsCollab, installScenesCollab, installCollabHooks, remotely, broadcastTileMaps, quietAssets, UNSTABLE_ID_OPCODES, abandonGesture, allTargetHashes, applyRemoteAssetUpdate, applyRemoteBlocksShared, applyRemoteTargetCreate, applyRemoteTargetDelete, applyRemoteTargetRename, applyRemoteTargetReorder, applyTargetBlocks, attachShadowRef, broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeOrder, broadcastCostumeRename, broadcastCostumeUpdate, broadcastSoundAdd, broadcastSoundDelete, broadcastSoundOrder, broadcastSoundRename, broadcastSoundUpdate, broadcastTargetCreate, broadcastTargetDelete, broadcastTargetRename, broadcastTargetReorder, clearRemoteEdited, computeBlocksHash as collabWorkspaceHealthDefault, colorForUserId, computeBlocksFingerprint, computeBlocksHash, contrastTextColor, dimodDragState, ensureEventVariables, findShadowRef, flushCostumeBroadcast, getRemoteEditedNames, handleRemotePaintPacket, hasActiveGesture, hasUnstableId, installBlockStateResponder, installConnectSafetyRails, installDragPreviewHook, installFieldCarets, installGestureRecovery, installPaintCollab, isApplyingRemotePaint, isLivePaintCostume, isPaintGestureActive, registerFieldCaretScope, repairAskewBlocks, resolveIncomingEvent, resolveShadowRef, resumePaintCollab, sanitizePreviewSvg, setAssetOrder, shareBlocksToTargetWithSync, suspendPaintCollab, targetBlocksHash, uninstallPaintCollab};
+export {ScenesAssetsCollab, installScenesCollab, installCollabHooks, remotely, broadcastTileMaps, quietAssets, UNSTABLE_ID_OPCODES, abandonGesture, allTargetHashes, applyRemoteAssetUpdate, applyRemoteBlocksShared, applyRemoteTargetCreate, applyRemoteTargetDelete, applyRemoteTargetRename, applyRemoteTargetReorder, applyTargetBlocks, attachShadowRef, broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeOrder, broadcastCostumeRename, broadcastCostumeUpdate, broadcastSoundAdd, broadcastSoundDelete, broadcastSoundOrder, broadcastSoundRename, broadcastSoundUpdate, broadcastTargetCreate, broadcastTargetDelete, broadcastTargetRename, broadcastTargetReorder, clearRemoteEdited, computeBlocksHash as collabWorkspaceHealthDefault, colorForUserId, computeBlocksFingerprint, computeBlocksHash, contrastTextColor, dimodDragState, ensureEventVariables, findShadowRef, flushCostumeBroadcast, getRemoteEditedNames, handleRemotePaintPacket, hasActiveGesture, hasUnstableId, installBlockStateResponder, installCommentCollab, installConnectSafetyRails, installDragPreviewHook, installFieldCarets, installGestureRecovery, installPaintCollab, isApplyingRemotePaint, isLivePaintCostume, isPaintGestureActive, registerFieldCaretScope, repairAskewBlocks, resolveIncomingEvent, resolveShadowRef, resumePaintCollab, sanitizePreviewSvg, setAssetOrder, shareBlocksToTargetWithSync, suspendPaintCollab, targetBlocksHash, uninstallPaintCollab};

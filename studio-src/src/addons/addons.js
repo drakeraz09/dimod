@@ -64,7 +64,6 @@ const addons = [
     'number-pad',
     'script-snap',
     'fullscreen',
-    'hide-stage',
     'tw-straighten-comments',
     'tw-remove-backpack',
     'tw-remove-feedback',

@@ -13,7 +13,7 @@ import {setFullScreen} from '../reducers/mode';
 import {emptySprite} from './empty-assets';
 import downloadBlob from './download-blob';
 import {STAGE_SIZE_MODES} from './layout-constants';
-import {askAlert, askConfirm, askPrompt, CODE_THEMES, setMonacoPref, STUDIO_COLOURS, STUDIO_STYLES} from './dimod-ui';
+import {askAlert, askConfirm, askPrompt, CODE_THEMES, paintReport, setMonacoPref, STUDIO_COLOURS, STUDIO_STYLES} from './dimod-ui';
 const RECENT_KEY = 'dimod:palette-recent';
 const recentIds = () => {
     try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { return []; }
@@ -883,6 +883,7 @@ const formatValue = value => {
     return text.length > 160 ? `${text.slice(0, 160)}...` : text;
 };
 const reportText = value => {
+    if (typeof value === 'number' || typeof value === 'boolean') return value;
     const text = value === null || typeof value === 'undefined' ? '' : String(value);
     return text.length > 1000 ? `${text.slice(0, 1000)}...` : text;
 };
@@ -950,12 +951,13 @@ const installPeek = (workspace, vm) => {
         const info = hoverBlock.workspace ? describeBlock(vm, hoverBlock) : null;
         if (!info) { hide(); return; }
         const text = info.report;
-        if (text === shown) return;
+        if (shown !== null && text === shown) return;
         const ScratchBlocks = getBlockly();
         const box = shown !== null && ScratchBlocks &&
             ScratchBlocks.DropDownDiv.getContentDiv().querySelector('.valueReportBox');
         if (box && box.firstChild && box.firstChild.nodeType === Node.TEXT_NODE) {
-            box.firstChild.nodeValue = text;
+            box.firstChild.nodeValue = String(text);
+            paintReport(ScratchBlocks, text, false);
             shown = text;
             return;
         }

@@ -560,21 +560,29 @@ const reportKind = value => {
     if (typeof value === 'object') return 'object';
     return null;
 };
+const paintReport = (ScratchBlocks, value, isError) => {
+    const kind = isError ? null : reportKind(value);
+    const tone = kind && REPORT_TONES[kind];
+    const dark = document.body.getAttribute('theme') === 'dark';
+    const box = ScratchBlocks.DropDownDiv.getContentDiv().firstChild;
+    if (!tone) {
+        ScratchBlocks.DropDownDiv.setColour(ScratchBlocks.Colours.valueReportBackground, isError ? ScratchBlocks.Colours.blockError : ScratchBlocks.Colours.valueReportBorder);
+        if (box) box.style.color = '';
+        return;
+    }
+    ScratchBlocks.DropDownDiv.setColour(tone[dark ? 3 : 0], tone[dark ? 4 : 1]);
+    if (box) box.style.color = tone[dark ? 5 : 2];
+};
 const installReportColours = ScratchBlocks => {
     const proto = ScratchBlocks.WorkspaceSvg.prototype;
     if (proto.dimodReportColours) return;
     proto.dimodReportColours = true;
-    const original = proto.reportValue;
-    proto.reportValue = function (id, value, isError) {
-        original.call(this, id, value, isError);
-        const kind = isError ? null : reportKind(value);
-        const tone = kind && REPORT_TONES[kind];
-        if (!tone) return;
-        const dark = document.body.getAttribute('theme') === 'dark';
-        const box = ScratchBlocks.DropDownDiv.getContentDiv().firstChild;
-        ScratchBlocks.DropDownDiv.setColour(tone[dark ? 3 : 0], tone[dark ? 4 : 1]);
-        if (box) box.style.color = tone[dark ? 5 : 2];
+    let inner = proto.reportValue;
+    const wrapped = function (id, value, isError) {
+        inner.call(this, id, value, isError);
+        paintReport(ScratchBlocks, value, isError);
     };
+    Object.defineProperty(proto, 'reportValue', {configurable: true, get: () => wrapped, set: fn => { inner = fn; }});
 };
 let monacoModule = null;
 let monacoPending = null;
@@ -676,4 +684,4 @@ const loadMonaco = () => monacoPending || (monacoPending = import(/* webpackChun
         return m;
     }, e => { monacoPending = null; throw e; }));
 const monacoReady = () => !!monacoModule;
-export {LIST_PROPS, accentCss, accentMatrix, applyAccent, askAlert, askConfirm, askPrompt, askRename, generateAvatarSVG, getCustomPromptHost, getDefaultPfp, handleListKey, isBlocklyEditorOpen, isDarkTheme, getMonacoPref, isGodotTheme, monacoThemeName, setMonacoPref, installReportColours, isTextEntryFocused, isUserTyping, loadMonaco, monaco, monacoReady, playNotifSound, setCustomPromptHost, setDialogHost, setRenamePrompt, showErrorToast};
+export {LIST_PROPS, accentCss, accentMatrix, applyAccent, askAlert, askConfirm, askPrompt, askRename, generateAvatarSVG, getCustomPromptHost, getDefaultPfp, handleListKey, isBlocklyEditorOpen, isDarkTheme, getMonacoPref, isGodotTheme, monacoThemeName, setMonacoPref, installReportColours, isTextEntryFocused, paintReport, isUserTyping, loadMonaco, monaco, monacoReady, playNotifSound, setCustomPromptHost, setDialogHost, setRenamePrompt, showErrorToast};

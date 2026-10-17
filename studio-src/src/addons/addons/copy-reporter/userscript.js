@@ -58,7 +58,7 @@ export default async function ({ addon, console, msg }) {
         copyButton.classList.add("sa-copy-reporter-icon");
         addon.tab.displayNoneWhileDisabled(copyButton);
 
-        copyButton.onclick = () => navigator.clipboard.writeText(value);
+        copyButton.onclick = () => navigator.clipboard.writeText(valueReportBox.textContent || value);
         valueReportBox.appendChild(copyButton);
       }
     }

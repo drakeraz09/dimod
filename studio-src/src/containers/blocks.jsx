@@ -48,6 +48,7 @@ import {
     hasActiveGesture,
     installGestureRecovery,
     installFieldCarets,
+    installCommentCollab,
     registerFieldCaretScope
 } from '../lib/dimod-collab.js';
 import {
@@ -261,6 +262,7 @@ class Blocks extends React.Component {
         installDragPreviewHook(this.ScratchBlocks);
         installGestureRecovery(this.ScratchBlocks);
         installFieldCarets(this.ScratchBlocks);
+        installCommentCollab(this.ScratchBlocks, props.vm);
         installPersistentFieldWidths(this.ScratchBlocks);
         installConnectSafetyRails(this.ScratchBlocks);
         installEventStamp(this.ScratchBlocks);

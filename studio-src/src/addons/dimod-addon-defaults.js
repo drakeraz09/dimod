@@ -1,6 +1,8 @@
 const DIMOD_ADDON_DEFAULTS = {'editor-theme3': {text: 'black'}, 'onion-skinning': {default: false}};
-const DIMOD_ADDONS_ENABLED_BY_DEFAULT = ['editor-theme3', 'remove-sprite-confirm'];
+const DIMOD_ADDONS_ENABLED_BY_DEFAULT = ['editor-theme3', 'remove-sprite-confirm', 'copy-reporter'];
+const DIMOD_ADDONS_REMOVED = ['hide-stage'];
 const applyDimodAddonDefaults = manifests => {
+    for (const addonId of DIMOD_ADDONS_REMOVED) delete manifests[addonId];
     for (const [addonId, overrides] of Object.entries(DIMOD_ADDON_DEFAULTS)) {
         const manifest = manifests[addonId];
         if (!manifest || !manifest.settings) { continue; }
@@ -15,4 +17,4 @@ const applyDimodAddonDefaults = manifests => {
     }
     return manifests;
 };
-export {DIMOD_ADDON_DEFAULTS, DIMOD_ADDONS_ENABLED_BY_DEFAULT, applyDimodAddonDefaults as default};
+export {DIMOD_ADDON_DEFAULTS, DIMOD_ADDONS_REMOVED, DIMOD_ADDONS_ENABLED_BY_DEFAULT, applyDimodAddonDefaults as default};
