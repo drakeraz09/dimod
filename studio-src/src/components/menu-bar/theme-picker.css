@@ -89,7 +89,7 @@ $item: 2.625rem;
 .pill {
     display: flex;
     background: $motion-primary;
-    border-radius: $item;
+    border-radius: 0.375rem;
     box-shadow: 0 0 0 4px $motion-transparent;
 }
 
