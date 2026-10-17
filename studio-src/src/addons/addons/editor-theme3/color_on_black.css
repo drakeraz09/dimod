@@ -1,7 +1,16 @@
 .u-dropdown-searchbar {
+  color: white;
+  background-color: hsla(0, 100%, 100%, 0.15);
   border-color: rgba(255, 255, 255, 0.15);
 }
+.u-dropdown-searchbar:hover {
+  background-color: hsla(0, 100%, 100%, 0.25);
+}
+.u-dropdown-searchbar::placeholder {
+  color: hsla(0, 0%, 100%, 0.6);
+}
 .u-dropdown-searchbar:focus {
+  color: white;
   background-color: var(--editorTheme3-hoveredItem);
 }
 .blocklyDropDownDiv .goog-menuitem-checkbox {

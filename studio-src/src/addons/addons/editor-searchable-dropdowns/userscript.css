@@ -2,8 +2,8 @@
   width: 100%;
   box-sizing: border-box;
   /* based on styles for the title input */
-  color: white;
-  background-color: hsla(0, 100%, 100%, 0.25);
+  color: black;
+  background-color: hsla(0, 100%, 100%, 0.6);
   border: 1px solid hsla(0, 0%, 0%, 0.15);
   padding: 0.5rem;
   outline: none;
@@ -13,7 +13,10 @@
   border-radius: 4px;
 }
 .u-dropdown-searchbar:hover {
-  background-color: hsla(0, 100%, 100%, 0.5);
+  background-color: hsla(0, 100%, 100%, 0.8);
+}
+.u-dropdown-searchbar::placeholder {
+  color: hsla(0, 0%, 0%, 0.55);
 }
 .u-dropdown-searchbar:focus {
   background-color: white;
