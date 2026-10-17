@@ -195,14 +195,14 @@ body[editor-theme="godot"] [class*="modal_modal-content_"],
 body[editor-theme="godot"] [class*="library_library-scroll-grid_"],
 body[editor-theme="godot"] .react-contextmenu,
 body[editor-theme="godot"] [class*="context-menu_context-menu_"],
-body[editor-theme="godot"] [class*="menu_menu_"],
-body[editor-theme="godot"] [class*="menu_menu-section_"] {
+body[editor-theme="godot"] [class*="menu_menu_"] {
     background: var(--g-base);
     border: 1px solid var(--g-line);
     border-radius: var(--g-radius);
     color: var(--g-text);
     box-shadow: 0 6px 18px var(--g-shadow);
 }
+body[editor-theme="godot"] [class*="menu_menu-section_"] { border-top: 1px solid var(--g-line); }
 body[editor-theme="godot"] [class*="modal_header_"] {
     background: var(--g-dark2);
     border-bottom: 1px solid var(--g-line);
