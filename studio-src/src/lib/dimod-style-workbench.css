@@ -243,3 +243,4 @@ body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_editor
 body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_mode-selector_"],
 body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_bottom-row_"] { zoom: 0.8; }
 body[editor-theme="godot"][dimod-style="workbench"] [data-dimod-asset-kind="costume"] [class*="selector_list-area_"] { zoom: 0.82; }
+body[editor-theme="godot"][dimod-style="workbench"] [data-dimod-asset-kind="costume"] [class*="selector_list-area_"] [class*="context-menu_context-menu_"] { zoom: 1.2195; }

@@ -1143,7 +1143,8 @@ class DimodToolGroup extends React.Component {
     open () {
         if (!this.ref) return;
         const rect = this.ref.getBoundingClientRect();
-        this.setState({open: {left: rect.left, top: rect.top, width: rect.width, height: rect.height}});
+        const z = this.ref.offsetWidth ? rect.width / this.ref.offsetWidth : 1; // hack: workbench theme zooms the toolbar, fixed coords scale with it
+        this.setState({open: {left: rect.left / z, top: rect.top / z, width: rect.width / z, height: rect.height / z}});
     }
     handleMouseLeave () { clearTimeout(this.timer); this.setState({open: null}); }
     handleClick () { clearTimeout(this.timer); this.setState({open: null}); }
