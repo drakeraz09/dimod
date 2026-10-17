@@ -1,3 +1,4 @@
+// dimod-animation is a port of KS4, my other project, moved into the studio
 const TD = {
   x: { label: "X", unit: "px", def: 0, kind: "num", color: "#e05555" },
   y: { label: "Y", unit: "px", def: 0, kind: "num", color: "#44cc77" },

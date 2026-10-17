@@ -1,3 +1,4 @@
+// dimod-animation is a port of KS4, my other project, moved into the studio
 import {animationsOf} from './runtime';
 import {normalizeAnim, serializeAnim, makeAnimId, uniqueName} from './core';
 import {colorForUserId} from '../dimod-collab';
