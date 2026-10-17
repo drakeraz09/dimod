@@ -251,7 +251,7 @@ const _palette = function () {
     const palette = doc.swatches;
     if (!Array.isArray(palette.entries)) palette.entries = [];
     if (Array.isArray(palette.colors)) _migrateColors(palette);
-    if (typeof palette.lock !== 'boolean') palette.lock = false;
+    if (typeof palette.lock !== 'boolean' || !palette.off) { palette.lock = false; palette.off = true; } // snapping is off by default now
     return palette;
 };
 const getSwatches = function () { return _palette().entries.map(entry => Object.assign({}, entry)); };
@@ -363,7 +363,8 @@ const _table = function () {
                     id,
                     name: String(palette.name || 'Palette'),
                     entries: palette.entries,
-                    lock: Boolean(palette.lock),
+                    lock: palette.off ? Boolean(palette.lock) : false,
+                    off: true,
                     updated: Number(palette.updated) || 0
                 };
             }
@@ -416,7 +417,7 @@ const savePaletteAs = function (name) {
         log.warn(`dimod: there is no room for more than ${MAX_PALETTES} palettes.`);
         return null;
     }
-    table[id] = {id, name: wanted, entries: getSwatches(), lock: isPaletteLocked(), updated: _stamp()};
+    table[id] = {id, name: wanted, entries: getSwatches(), lock: isPaletteLocked(), off: true, updated: _stamp()};
     _binding().paletteId = id;
     _persist();
     return table[id];
