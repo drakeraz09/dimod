@@ -1114,7 +1114,7 @@ class Blocks extends React.Component {
     }
     handleRemoteWorkspaceHealth (payload, fromUserId) {
         const vm = this.props.vm;
-        if (!vm || !payload) return;
+        if (!vm || !payload || payload.fp) return;
         if (!vm.__dimodProjectFullyLoaded || Date.now() < this._workspaceHealthArmAt) return;
         if (this._deferredRemoteBlockEvents.length) return;
         if (this.isProjectRunning()) return;

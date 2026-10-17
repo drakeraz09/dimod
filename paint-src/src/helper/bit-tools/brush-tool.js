@@ -379,6 +379,7 @@ class BrushTool extends paper.Tool {
             this.drawTarget.parent = getGuideLayer();
             this.drawTarget.guide = true;
             this.drawTarget.locked = true;
+            this.drawTarget.data.collabTiles = true;
             this.drawTarget.position = getRaster().position;
 
             if (this.color && doesColorRequireMask(this.color)) {

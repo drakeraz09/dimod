@@ -174,6 +174,7 @@ class CollabProvider {
             const users = Array.isArray(msg.users) ? msg.users : [];
             this.peerCount = Math.max(0, users.length - 1);
             if (this.onPresenceUpdate) this.onPresenceUpdate(msg.users);
+            window.dispatchEvent(new CustomEvent('dimod:presence', {detail: users}));
         } else if (msg.type === 'source-restored') {
             if (this.onSourceRestored) this.onSourceRestored(msg);
         }

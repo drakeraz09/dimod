@@ -26,6 +26,7 @@ import {getBrushMark, forEachLinePoint} from '../bitmap';
 import {isPaintSuspended} from '../../lib/dimod-flags';
 import Cursors from '../../lib/cursors';
 import {setLiveOverlay, liveOverlayChanged} from '../../dimod/render';
+import {setLivePreviewSource} from '../../dimod/collab';
 import {getEffectiveSelectionPivot, getSelectionBounds, clearSelectionPivot, snapPivot, isDefaultPivot, setSelectionPivot} from '../../dimod/pivot';
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
 const rgba = css => {
@@ -186,6 +187,7 @@ class DimodGradientTool extends paper.Tool {
         this.preview = new paper.Raster({canvas, insert: false});
         this.preview.guide = true;
         this.preview.data.isHelperItem = true;
+        this.preview.data.collabPreview = true;
         this.preview.position = new paper.Point(this.bounds.x + (data.width / 2), this.bounds.y + (data.height / 2));
         this.preview.parent = getGuideLayer();
         this.preview.sendToBack();
@@ -268,7 +270,7 @@ class DimodPolygonTool extends paper.Tool {
         if (!this.path) {
             if (!this.bitmap) clearSelection(this.callbacks.clearSelectedItems);
             this.path = new paper.Path({segments: [point, point], closed: false});
-            if (this.bitmap) { this.path.guide = true; this.path.data.isHelperItem = true; this.path.parent = getGuideLayer(); }
+            if (this.bitmap) { this.path.guide = true; this.path.data.isHelperItem = true; this.path.data.collabPreview = true; this.path.parent = getGuideLayer(); }
             this.stylePath();
             this.last = {time: Date.now(), point};
             document.addEventListener('keydown', this.handleKey, true);
@@ -556,6 +558,7 @@ class DimodStrokeBrush {
             this.spray = null;
             this.marks = null;
             setLiveOverlay(null);
+            setLivePreviewSource(null);
         } else if (this.custom || this.brush.preset === 'SPRAY') {
             if (this.custom) this.taperStamps();
             result = this.spray;
@@ -563,6 +566,7 @@ class DimodStrokeBrush {
             this.marks = null;
             paper.project.activeLayer.addChild(result);
             setLiveOverlay(null);
+            setLivePreviewSource(null);
         } else { result = this.build(true); }
         if (this.preview && this.preview !== result) this.preview.remove();
         this.preview = null;
@@ -576,6 +580,18 @@ class DimodStrokeBrush {
         const css = color && color.type !== 'gradient' ? color.toCSS(true) : 'black';
         const custom = this.custom;
         const markCache = new Map();
+        const tipD = this.tip ? this.tip.getPathData(null, 3) : null;
+        setLivePreviewSource(() => {
+            const marks = this.marks;
+            if (!marks || !marks.length) return null;
+            let out = '';
+            for (let i = 0; i < marks.length && i < 700; i++) {
+                const m = marks[i];
+                if (tipD) out += `<path transform="translate(${m.x.toFixed(1)} ${m.y.toFixed(1)}) scale(${(m.size || 1).toFixed(2)})" d="${tipD}"/>`;
+                else out += `<circle cx="${m.x.toFixed(1)}" cy="${m.y.toFixed(1)}" r="${(m.r || 1).toFixed(2)}"/>`;
+            }
+            return `<g fill="${css}">${out}</g>`;
+        });
         const each = (mark, fn) => {
             fn(mark.x, mark.y);
             if (isMirrorActive()) for (const image of mirrorPoint(mark.x, mark.y)) fn(image.x, image.y);
@@ -791,7 +807,7 @@ class DimodStrokeBrush {
         liveOverlayChanged();
     }
     cancel () {
-        if (this.marks) setLiveOverlay(null);
+        if (this.marks) { setLiveOverlay(null); setLivePreviewSource(null); }
         this.marks = null;
         if (this.preview) this.preview.remove();
         if (this.spray) this.spray.remove();

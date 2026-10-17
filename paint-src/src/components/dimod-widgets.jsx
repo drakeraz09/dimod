@@ -85,6 +85,8 @@ class DimodCollabOverlay extends React.Component {
         bindAll(this, ['handlePeersChanged', 'animationFrame', 'setRootRef']);
         this.state = {peers: getPeers()};
         this.groupRefs = {};
+        this.itemRefs = {};
+        this.cursorAt = {};
         this.cursorRefs = {};
         this.selectionRefs = {};
     }
@@ -110,15 +112,9 @@ class DimodCollabOverlay extends React.Component {
     }
     handlePeersChanged () {
         const peers = getPeers();
-        const same = peers.length === this.state.peers.length &&
-            peers.every((peer, i) => {
-                const was = this.state.peers[i];
-                return was && was.peerId === peer.peerId &&
-                    was.preview === peer.preview &&
-                    was.tool === peer.tool &&
-                    was.selection === peer.selection &&
-                    was.username === peer.username;
-            });
+        const sig = peers.map(peer => [peer.peerId, peer.tool, peer.username, peer.selection.join(), peer.preview ? `${peer.preview.g}.${peer.preview.rev}` : '-'].join('|')).join('/');
+        const same = sig === this.sig && peers.length === this.state.peers.length;
+        this.sig = sig;
         if (!same) this.setState({peers: peers.slice()});
     }
     setRootRef (element) { this.rootEl = element; }
@@ -140,6 +136,7 @@ class DimodCollabOverlay extends React.Component {
         for (const peer of this.state.peers) {
             const group = this.groupRefs[peer.peerId];
             if (group) group.setAttribute('transform', transform);
+            this.positionItems(peer);
             this.positionSelection(peer);
             this.positionCursor(peer, rect);
         }
@@ -159,11 +156,52 @@ class DimodCollabOverlay extends React.Component {
             node.setAttribute('height', Math.max(0, bounds.height + (SELECTION_PADDING * 2)));
         }
     }
+    positionItems (peer) {
+        const pv = peer.preview;
+        if (!pv) return;
+        for (const [k, it] of pv.items) {
+            const el = this.itemRefs[`${peer.peerId}:${k}`];
+            if (!el) continue;
+            if (!it.cur || it.curV !== it.v) { it.cur = it.m.slice(); it.curV = it.v; }
+            let moved = false;
+            for (let i = 0; i < 6; i++) {
+                const d = it.m[i] - it.cur[i];
+                if (Math.abs(d) > 1e-4) { it.cur[i] += d * 0.45; moved = true; } else it.cur[i] = it.m[i];
+            }
+            if (moved || el.__m !== it.cur.join()) { el.__m = it.cur.join(); el.setAttribute('transform', `matrix(${el.__m})`); }
+            if (it.gk && it.p) this.positionGeo(el, it);
+        }
+    }
+    positionGeo (el, it) {
+        const path = el.firstElementChild;
+        if (!path || path.tagName !== 'path') return;
+        if (!it.pc || it.pc.length !== it.p.length || it.pcV !== it.v) { it.pc = it.p.slice(); it.pcV = it.v; }
+        const p = it.pc;
+        for (let i = 0; i < p.length; i++) {
+            const d = it.p[i] - p[i];
+            p[i] = Math.abs(d) > 0.02 ? p[i] + (d * 0.45) : it.p[i];
+        }
+        let d = '';
+        let i = 0;
+        for (const part of it.gk.split(',')) {
+            if (!part) continue;
+            const n = +part.slice(1);
+            const c = (q, o) => `C${p[q] + p[q + 4]} ${p[q + 1] + p[q + 5]} ${p[o] + p[o + 2]} ${p[o + 1] + p[o + 3]} ${p[o]} ${p[o + 1]}`;
+            for (let j = 0; j < n; j++) d += j ? c(i + ((j - 1) * 6), i + (j * 6)) : `M${p[i]} ${p[i + 1]}`;
+            if (part[0] === 'c' && n > 1) d += `${c(i + ((n - 1) * 6), i)}Z`;
+            i += n * 6;
+        }
+        if (el.__d !== d) { el.__d = d; path.setAttribute('d', d); }
+    }
     positionCursor (peer, rect) {
         const element = this.cursorRefs[peer.peerId];
         if (!element) return;
         if (!peer.cursor) { element.style.display = 'none'; return; }
-        const point = paper.view.projectToView(new paper.Point(peer.cursor.x, peer.cursor.y));
+        let at = this.cursorAt[peer.peerId];
+        if (!at || Math.abs(at.x - peer.cursor.x) + Math.abs(at.y - peer.cursor.y) > 400) at = {x: peer.cursor.x, y: peer.cursor.y};
+        at = {x: at.x + ((peer.cursor.x - at.x) * 0.4), y: at.y + ((peer.cursor.y - at.y) * 0.4)};
+        this.cursorAt[peer.peerId] = at;
+        const point = paper.view.projectToView(new paper.Point(at.x, at.y));
         if (point.x < 0 || point.y < 0 || point.x > rect.width || point.y > rect.height) {
             element.style.display = 'none';
             return;
@@ -172,19 +210,36 @@ class DimodCollabOverlay extends React.Component {
         element.style.transform = `translate(${point.x}px, ${point.y}px)`;
     }
     renderGhost (peer) {
-        if (!peer.preview) return null;
+        const pv = peer.preview;
+        if (!pv) return null;
+        const trail = pv.trail && pv.trail.p.length >= 2 ? pv.trail : null;
+        let d = '';
+        if (trail) for (let i = 0; i < trail.p.length; i += 2) d += `${i ? 'L' : 'M'}${trail.p[i]} ${trail.p[i + 1]}`;
         return (
-            <g>
-                {peer.preview.svg ? (
-                    <g dangerouslySetInnerHTML={{__html: peer.preview.svg}} />
+            <g data-ghost="1" style={{filter: `drop-shadow(0 0 1.5px ${peer.color})`}}>
+                {pv.tiles.map((t, i) => (
+                    <image key={`t${i}`} href={t.d} x={t.x} y={t.y} width={t.w} height={t.h} preserveAspectRatio="none" />
+                ))}
+                {pv.set ? (
+                    <image href={pv.set.d} x={pv.set.x} y={pv.set.y} width={pv.set.w} height={pv.set.h} preserveAspectRatio="none" />
                 ) : null}
-                {peer.preview.dataUrl && peer.preview.rect ? (
-                    <image
-                        href={peer.preview.dataUrl}
-                        x={peer.preview.rect.x}
-                        y={peer.preview.rect.y}
-                        width={peer.preview.rect.width}
-                        height={peer.preview.rect.height}
+                {[...pv.items].map(([k, it]) => (
+                    <g
+                        key={`i${k}.${it.v}`}
+                        ref={el => { this.itemRefs[`${peer.peerId}:${k}`] = el; }}
+                        dangerouslySetInnerHTML={{__html: it.svg}}
+                    />
+                ))}
+                {trail ? (
+                    <path
+                        d={d}
+                        fill="none"
+                        stroke={peer.color}
+                        strokeOpacity={/ERASER/.test(pv.tool || '') ? 0.35 : 0.6}
+                        strokeWidth={Math.max(1, trail.w)}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeDasharray={/ERASER/.test(pv.tool || '') ? `${Math.max(2, trail.w / 3)} ${Math.max(2, trail.w / 3)}` : null}
                     />
                 ) : null}
             </g>

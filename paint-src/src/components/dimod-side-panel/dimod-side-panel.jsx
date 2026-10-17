@@ -21,7 +21,7 @@ import {getPaintingLayer} from '../../dimod/store';
 import {getDid, setHistoryLabel, runCommand, loadSettings, saveSettings} from '../../dimod/core';
 import {getSymbolSource, placeSymbol, refreshSymbol, symbolStale, detachSymbol} from '../../dimod/items';
 import {DimodDialog} from '../dimod-widgets.jsx';
-import {subscribeRemoteApplied} from '../../dimod/collab';
+import {liveCommit, subscribeRemoteApplied} from '../../dimod/collab';
 const messages$2 = defineMessages({
     opened: {defaultMessage: 'Opened', description: 'History: the costume as it was opened', id: 'paint.history.opened'},
     edit: {defaultMessage: 'Edit', description: 'History: a change with no better name', id: 'paint.history.edit'},
@@ -970,11 +970,16 @@ class CompositionPanel extends React.Component {
     }
     items () { return isBitmap(this.props.format) ? [] : getSelectedRootItems(); }
     apply (key, value) { this.items().forEach(item => { item[key] = value; }); this.forceUpdate(); }
-    handleOpacity (event) { this.apply('opacity', Number(event.target.value) / 100); this.dirty = true; }
+    live () {
+        if (this.liveTimer) return;
+        this.liveTimer = setTimeout(() => { this.liveTimer = null; if (this.dirty) liveCommit(true); }, 0);
+    }
+    handleOpacity (event) { this.apply('opacity', Number(event.target.value) / 100); this.dirty = true; this.live(); }
     handleOpacityNumber (event) {
         const value = Math.max(0, Math.min(100, Number(event.target.value) || 0));
         this.apply('opacity', value / 100);
         this.dirty = true;
+        this.live();
     }
     handleCommit () {
         if (!this.dirty) return;

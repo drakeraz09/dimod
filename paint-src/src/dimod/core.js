@@ -55,11 +55,18 @@ const textureBrush = ref => {
     return brush;
 };
 const getTextureBrushes = () => Object.keys(LINE_TEXTURES).map(textureBrush).filter(Boolean);
+const remoteBrushes = new Map();
+const addRemoteBrush = b => {
+    if (!b || typeof b.id !== 'string' || b.id.length > 80 || typeof b.mask !== 'string' || b.mask.length > 400000) return;
+    if (b.svg && (typeof b.svg !== 'string' || b.svg.length > MAX_SVG)) return;
+    if (load().some(x => x.id === b.id) || remoteBrushes.has(b.id)) return;
+    remoteBrushes.set(b.id, {id: b.id, name: String(b.name || ''), mask: b.mask, svg: b.svg || null, spacing: Number(b.spacing) || 25, scatter: Number(b.scatter) || 0});
+};
 const customBrushFor = preset => {
     if (isTexture(preset)) return textureBrush(preset);
     if (!isCustomPreset(preset)) return null;
     const id = preset.slice(PREFIX.length);
-    return load().find(b => b.id === id) || null;
+    return load().find(b => b.id === id) || remoteBrushes.get(id) || null;
 };
 const subscribeCustomBrushes = fn => { listeners.add(fn); return () => listeners.delete(fn); };
 const loadImage = src => new Promise((resolve, reject) => {
@@ -969,4 +976,4 @@ const pruneDoc = function (doc, presentDids) {
         link.members.every(member => presentDids.has(member.did)));
     return doc;
 };
-export {bakeBrush, getTextureBrushes, getLineTextures, tipIcon, brushSource, ID_LENGTH, ID_PREFIX, LINE_STYLES, LineProfiles, applyLineStyle, lineDash, lineStyleOf, readLineStyle, setLineStyle, MARKER, MAX_IMAGES, VERSION, addCustomBrushFromFile, applyLineProfile, attributeToDid, createDoc, customBrushFor, deserializeDoc, didToAttribute, generateDid, getBrushOptions, getCustomBrushes, getDid, getLineProfile, getMirrorLines, getMirrorMatrices, getMirrorRadial, getPaintOptions, getPressure, getVectorTip, hasCommand, hasFlag, isCustomPreset, isEmptyDoc, isMirrorActive, kaleidoscope, labelled, loadSettings, makeCustomMark, mirrorItem, mirrorPoint, preloadCustomBrushes, presetFor, profileOnExport, profileOnImport, profileWidth, pruneDoc, readDoc, reflection, registerCommands, removeCustomBrush, runCommand, saveSettings, serializeDoc, setCurrentBrushOption, setCurrentMirrorEnabled, setCurrentMirrorLines, setCurrentMirrorRadial, setDid, setFlag, setHistoryLabel, setHistoryMode, setLineProfile, setPaintOption, subscribeCustomBrushes, subscribePaintOptions, takeHistoryLabel, updateCustomBrush, writeDoc};
+export {addRemoteBrush, bakeBrush, getTextureBrushes, getLineTextures, tipIcon, brushSource, ID_LENGTH, ID_PREFIX, LINE_STYLES, LineProfiles, applyLineStyle, lineDash, lineStyleOf, readLineStyle, setLineStyle, MARKER, MAX_IMAGES, VERSION, addCustomBrushFromFile, applyLineProfile, attributeToDid, createDoc, customBrushFor, deserializeDoc, didToAttribute, generateDid, getBrushOptions, getCustomBrushes, getDid, getLineProfile, getMirrorLines, getMirrorMatrices, getMirrorRadial, getPaintOptions, getPressure, getVectorTip, hasCommand, hasFlag, isCustomPreset, isEmptyDoc, isMirrorActive, kaleidoscope, labelled, loadSettings, makeCustomMark, mirrorItem, mirrorPoint, preloadCustomBrushes, presetFor, profileOnExport, profileOnImport, profileWidth, pruneDoc, readDoc, reflection, registerCommands, removeCustomBrush, runCommand, saveSettings, serializeDoc, setCurrentBrushOption, setCurrentMirrorEnabled, setCurrentMirrorLines, setCurrentMirrorRadial, setDid, setFlag, setHistoryLabel, setHistoryMode, setLineProfile, setPaintOption, subscribeCustomBrushes, subscribePaintOptions, takeHistoryLabel, updateCustomBrush, writeDoc};

@@ -39,7 +39,8 @@ import {
 import {
     beginGesture,
     endGesture,
-    isTrackingGesture,
+    hasGesture,
+    isStickyTool,
     sendLocalCursor,
     setCollabHost,
     setLocalTool,
@@ -129,6 +130,9 @@ class PaintEditor extends React.Component {
             'handleDocumentPaste',
             'switchModeForFormat',
             'onMouseDown',
+            'onGestureStart',
+            'onTextTyping',
+            'onTextDone',
             'onMouseMove',
             'onMouseUp',
             'setCanvas',
@@ -167,12 +171,17 @@ class PaintEditor extends React.Component {
         // canvas, and should therefore stop the eye dropper
         document.addEventListener('mousedown', this.onMouseDown);
         document.addEventListener('touchstart', this.onMouseDown);
+        document.addEventListener('mousedown', this.onGestureStart, true);
+        document.addEventListener('input', this.onTextTyping, true);
+        document.addEventListener('focusout', this.onTextDone, true);
+        document.addEventListener('touchstart', this.onGestureStart, true);
         document.addEventListener('mouseup', this.onMouseUp);
         document.addEventListener('touchend', this.onMouseUp);
         document.addEventListener('mousemove', this.onMouseMove);
         document.addEventListener('touchmove', this.onMouseMove);
         setCollabHost({
-            updateImage: () => this.props.onUpdateImage(true )
+            updateImage: () => this.props.onUpdateImage(true ),
+            isBitmap: () => isBitmap(this.props.format)
         });
         setLocalTool(this.props.mode);
         setHistoryMode(this.props.mode);
@@ -244,6 +253,10 @@ class PaintEditor extends React.Component {
         this.stopEyeDroppingLoop();
         document.removeEventListener('mousedown', this.onMouseDown);
         document.removeEventListener('touchstart', this.onMouseDown);
+        document.removeEventListener('mousedown', this.onGestureStart, true);
+        document.removeEventListener('input', this.onTextTyping, true);
+        document.removeEventListener('focusout', this.onTextDone, true);
+        document.removeEventListener('touchstart', this.onGestureStart, true);
         document.removeEventListener('mouseup', this.onMouseUp);
         document.removeEventListener('touchend', this.onMouseUp);
         document.removeEventListener('mousemove', this.onMouseMove);
@@ -414,15 +427,27 @@ class PaintEditor extends React.Component {
             this.props.removeTextEditTarget();
         }
 
-        if (event.target === paper.view.element) {
-            beginGesture({
-                isVector: isVector(this.props.format),
-                getRaster: getRaster
-            });
-        }
+    }
+    onTextTyping (event) {
+        if (event.target !== this.state.textArea || hasGesture()) return;
+        beginGesture({isVector: isVector(this.props.format), getRaster: getRaster, getSize: () => this.props.toolSize, focusId: this.props.textEditTargetId});
+    }
+    onTextDone (event) {
+        if (event.target === this.state.textArea && hasGesture()) endGesture();
+    }
+    onGestureStart (event) {
+        if (event.target !== paper.view.element || (event.button > 0)) return;
+        beginGesture({
+            isVector: isVector(this.props.format),
+            getRaster: getRaster,
+            getSize: () => this.props.toolSize
+        });
     }
     onMouseMove (event) {
-        const tracking = isTrackingGesture();
+        if (!hasGesture() && isStickyTool() && event.target === paper.view.element) {
+            beginGesture({isVector: isVector(this.props.format), getRaster: getRaster, getSize: () => this.props.toolSize});
+        }
+        const tracking = hasGesture();
         const sampling = shouldSampleCursor();
         if (!tracking && !sampling) return;
         if (!paper.view || !paper.view.element) return;
@@ -437,7 +462,7 @@ class PaintEditor extends React.Component {
         if (sampling && event.target === paper.view.element) sendLocalCursor(point);
     }
     onMouseUp () {
-        endGesture();
+        if (!isStickyTool()) endGesture();
         if (this.props.isEyeDropping) {
             const colorString = this.eyeDropper.colorString;
             const pickedStyle = this.eyeDropper.pickedStyle;
@@ -615,6 +640,7 @@ const mapStateToProps = state => ({
     format: state.scratchPaint.format,
     isEyeDropping: state.scratchPaint.color.eyeDropper.active,
     mode: state.scratchPaint.mode,
+    toolSize: state.scratchPaint.mode === 'BIT_ERASER' ? state.scratchPaint.bitEraserSize : state.scratchPaint.mode === 'ERASER' ? state.scratchPaint.eraserMode.brushSize : state.scratchPaint.mode === 'BRUSH' ? state.scratchPaint.brushMode.brushSize : state.scratchPaint.bitBrushSize,
     previousTool: state.scratchPaint.color.eyeDropper.previousTool,
     reduxTheme: state.scratchPaint.theme,
     viewBounds: state.scratchPaint.viewBounds

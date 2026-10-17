@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify';
-import {getDimodUserId, isApplyingRemote} from './dimod-project';
+import {getDimodUserId, isApplyingRemote, runAsRemote} from './dimod-project';
+import {isUserTyping} from './dimod-ui';
 import Comment from 'scratch-vm/src/engine/comment';
 import log from './log.js';
 import {kindOfExt} from './dimod-scenes';
@@ -71,20 +72,50 @@ const isDocOk = doc => typeof doc === 'string' && doc.length <= MAX_DOC_BYTES;
 const vetPacket = (packet, fromUserId) => {
     if (!packet || typeof packet !== 'object') return null;
     if (packet.op === 'preview') {
+        const fin = (...xs) => xs.every(Number.isFinite);
+        const okUrl = d => typeof d === 'string' && d.length <= MAX_PREVIEW_BYTES && BITMAP_DATA_URL.test(d);
+        const okTile = t => t && okUrl(t.d) && fin(t.x, t.y, t.w, t.h) && t.w > 0 && t.h > 0 && t.w < 1e5 && t.h < 1e5;
+        let budget = MAX_PREVIEW_BYTES;
+        const items = (Array.isArray(packet.items) ? packet.items : []).slice(0, 64).map(it => {
+            if (!it || !Number.isInteger(it.k)) return null;
+            const out = {k: it.k};
+            if (it.svg) {
+                if (typeof it.svg !== 'string' || it.svg.length > budget) return null;
+                budget -= it.svg.length;
+                out.svg = sanitizePreviewSvg(it.svg);
+                if (!out.svg) return null;
+            }
+            if (Array.isArray(it.m) && it.m.length === 6 && fin(...it.m)) out.m = it.m.slice();
+            if (typeof it.gk === 'string' && it.gk.length < 400 && /^([co]\d+,)+$/.test(it.gk)) out.gk = it.gk;
+            if (Array.isArray(it.p) && it.p.length <= 1200 && it.p.length % 6 === 0 && fin(...it.p)) out.p = it.p.slice();
+            return out.svg || out.m || out.p ? out : null;
+        }).filter(Boolean);
+        const tiles = (Array.isArray(packet.tiles) ? packet.tiles : []).slice(0, 8).filter(okTile).map(t => ({d: t.d, x: t.x, y: t.y, w: t.w, h: t.h}));
+        const set = okTile(packet.set) ? {d: packet.set.d, x: packet.set.x, y: packet.set.y, w: packet.set.w, h: packet.set.h} : null;
+        const tr = packet.trail;
+        const trail = tr && Array.isArray(tr.p) && tr.p.length <= 8000 && tr.p.length % 2 === 0 && Number.isInteger(tr.from) && tr.from >= 0 &&
+            fin(tr.w, ...tr.p) ? {p: tr.p.slice(), w: Math.min(500, Math.max(0, tr.w)), from: tr.from} : null;
+        const ks = Array.isArray(packet.ks) ? packet.ks.slice(0, 64).filter(Number.isInteger) : null;
         const svg = packet.svg ? sanitizePreviewSvg(packet.svg) : null;
-        const dataUrl = typeof packet.dataUrl === 'string' &&
-            packet.dataUrl.length <= MAX_PREVIEW_BYTES &&
-            BITMAP_DATA_URL.test(packet.dataUrl) ? packet.dataUrl : null;
-        if (!svg && !dataUrl) return null;
+        const dataUrl = okUrl(packet.dataUrl) ? packet.dataUrl : null;
+        if (!svg && !dataUrl && !items.length && !tiles.length && !set && !trail && !ks) return null;
         const rect = packet.rect;
         const rectOk = rect && ['x', 'y', 'width', 'height'].every(k => Number.isFinite(rect[k]));
-        return Object.assign({}, packet, {
-            svg,
-            dataUrl,
+        return {
+            v: packet.v, op: 'preview', targetId: packet.targetId, costumeIndex: packet.costumeIndex,
+            g: Number.isInteger(packet.g) ? packet.g : 0,
+            tool: typeof packet.tool === 'string' && packet.tool.length <= MAX_TOOL_LEN ? packet.tool : null,
+            items, tiles, set, trail, ks, svg, dataUrl,
             rect: rectOk ? rect : null,
             username: packet.fromUsername || '',
             color: colorForUserId(fromUserId)
-        });
+        };
+    }
+    if (packet.op === 'bpatch') {
+        const okUrl = d => typeof d === 'string' && d.length <= MAX_OP_BYTES && BITMAP_DATA_URL.test(d);
+        if (typeof packet.pid !== 'string' || !DID.test(packet.pid) || !okUrl(packet.d) || !okUrl(packet.k)) return null;
+        if (![packet.x, packet.y, packet.w, packet.h].every(n => Number.isInteger(n) && n >= 0 && n <= 8192)) return null;
+        return {v: packet.v, op: 'bpatch', targetId: packet.targetId, costumeIndex: packet.costumeIndex, pid: packet.pid, x: packet.x, y: packet.y, w: packet.w, h: packet.h, d: packet.d, k: packet.k};
     }
     if (packet.op === 'cursor') {
         if (!Number.isFinite(packet.x) || !Number.isFinite(packet.y)) return null;
@@ -136,6 +167,12 @@ const installPaintCollab = ({targetId, costumeIndex}) => {
     PaintCollab.setCollabCostume({targetId, costumeIndex});
     installedFor = {targetId, costumeIndex};
 };
+if (typeof window !== 'undefined') {
+    window.addEventListener('dimod:presence', e => {
+        const PaintCollab = getPaintCollab();
+        if (PaintCollab && PaintCollab.keepPeers && Array.isArray(e.detail)) PaintCollab.keepPeers(e.detail.map(u => u && u.userId));
+    });
+}
 const uninstallPaintCollab = () => {
     const PaintCollab = getPaintCollab();
     if (PaintCollab) { PaintCollab.setCollabCostume(null); PaintCollab.clearCollabTransport(); }
@@ -261,6 +298,12 @@ const broadcastCostumeUpdate = (vm, costumeIndex, isVector, image, rotationCente
         rotationCenterX,
         rotationCenterY
     };
+    if (!isVector && isLivePaintCostume(target.id, costumeIndex)) {
+        const PaintCollab = getPaintCollab();
+        const pid = PaintCollab && PaintCollab.takePatchState ? PaintCollab.takePatchState() : null;
+        const prev = pendingCostumeBroadcast;
+        if (pid && !(prev && prev.base.targetId === base.targetId && prev.base.costumeIndex === base.costumeIndex && !prev.base.pid)) base.pid = pid;
+    }
     if (pendingCostumeBroadcast &&
         (pendingCostumeBroadcast.base.targetId !== base.targetId ||
             pendingCostumeBroadcast.base.costumeIndex !== base.costumeIndex)) { flushCostumeBroadcast(); }
@@ -336,8 +379,20 @@ const applyCostumeUpdate = (vm, payload) => {
             vm._updateBitmap(costume, imageData, payload.rotationCenterX, payload.rotationCenterY, 2);
             notifyCostumeUpdated(payload.targetId, index);
         };
-        if (isLivePaintCostume(payload.targetId, index) && isPaintGestureActive()) { deferBitmapUpdate(apply); return; }
-        apply();
+        const PaintCollab = isLivePaintCostume(payload.targetId, index) && typeof payload.pid === 'string' ? getPaintCollab() : null;
+        const patched = PaintCollab && PaintCollab.whenPatch ? PaintCollab.whenPatch(payload.pid) : null;
+        const go = () => {
+            if (isLivePaintCostume(payload.targetId, index) && isPaintGestureActive()) { deferBitmapUpdate(apply); return; }
+            apply();
+        };
+        if (patched) {
+            return patched.then(ok => {
+                if (!ok) { go(); return; }
+                if (stale() || target.getCostumes()[index] !== costume) return;
+                takeAssetVer(vkey, payload);
+            });
+        }
+        go();
     });
 };
 const broadcastSoundUpdate = (vm, soundIndex, wavBytes) => {
@@ -1573,13 +1628,11 @@ const broadcastTargetCreate = (vm, targetId = vm.editingTarget && vm.editingTarg
     if (!target) return;
     const stamp = newStamp();
     targetStamps.set(targetId, stamp);
-    const name = target.getName();
-    const list = originals(vm);
-    const prev = list[list.indexOf(target) - 1];
-    const after = prev ? prev.id : null;
     vm.exportSprite(targetId, 'base64').then(base64 => {
-        if (!window.dimodCollab) return;
-        window.dimodCollab.sendTargetCreate({targetId, sprite: base64, name, stamp, after});
+        if (!window.dimodCollab || vm.runtime.getTargetById(targetId) !== target) return;
+        const list = originals(vm);
+        const prev = list[list.indexOf(target) - 1];
+        window.dimodCollab.sendTargetCreate({targetId, sprite: base64, name: target.getName(), stamp, after: prev ? prev.id : null});
     });
 };
 const base64ToArrayBuffer = base64 => {
@@ -1643,6 +1696,7 @@ const applyRemoteTargetCreate = (vm, payload) => queued(() => {
                 }
             }
         }
+        if (mine && !clash && typeof payload.name === 'string' && payload.name && mine.getName() !== payload.name) remotely(() => vm.renameSprite(mine.id, payload.name));
         if (clash && later(s, targetStamps.get(clash.id))) {
             remotely(() => {
                 const theirs = mine.getName();
@@ -2147,11 +2201,12 @@ class ScenesAssetsCollab {
         this.off = c.addMessageListener(msg => this.onMessage(msg));
         if (c.joined) this.ask();
     }
-    ask () {
+    ask (to) {
         this.req = Math.random().toString(36).slice(2);
+        this.forced = !!to;
         const have = {};
         for (const a of this.assets.list) have[a.id] = bytesHash(this.assets.bytes(a));
-        this.send('scene-state-request', {req: this.req, have});
+        this.send('scene-state-request', {req: this.req, have, toTab: to || undefined});
     }
     rebase () { this.sbase = this.ssnap(); this.abase = this.asnap(); }
     busy () { return this.quiet > 0 || !!this.vm.runtime.sequencer.activeThread || this.vm.dimodRemoteTargetCreates > 0; }
@@ -2313,6 +2368,7 @@ class ScenesAssetsCollab {
     }
     answer (msg) {
         if (typeof msg.req !== 'string' || this.answered.has(msg.req)) return;
+        if (msg.toTab && (!window.dimodCollab || msg.toTab !== window.dimodCollab.tabId)) return;
         if (this.atimer) this.flushAssets();
         const have = msg.have && typeof msg.have === 'object' ? msg.have : {};
         const a = this.assets;
@@ -2326,7 +2382,8 @@ class ScenesAssetsCollab {
         this.answered.add(msg.req);
         if (msg.req !== this.req) return;
         this.req = null;
-        if (this.edited) return;
+        if (this.edited && !this.forced) return;
+        this.forced = false;
         const s = msg.scenes && typeof msg.scenes === 'object' ? msg.scenes : null;
         const list = s && Array.isArray(s.list) ? s.list.filter(okScene) : [];
         if (list.length) {
@@ -2358,7 +2415,7 @@ class ScenesAssetsCollab {
             this.sendScene(true);
             return this.vm.runtime.emit('DIMOD_SCENE_PRESENCE');
         }
-        case 'scene-state-request': return setTimeout(() => this.answer(msg), Math.random() * 400);
+        case 'scene-state-request': return setTimeout(() => this.answer(msg), msg.toTab ? 0 : Math.random() * 400);
         case 'scene-state': return this.onState(msg);
         case 'scene-patch': return this.applyScenes(msg);
         case 'dasset-patch': return this.applyAssets(msg);
@@ -2366,6 +2423,467 @@ class ScenesAssetsCollab {
         }
     }
 }
+const FP_MS = 1200;
+const FP_STABLE = 2;
+const FP_QUIET_MS = 2000;
+const FP_SETTLE_MS = 8000;
+const fpH = s => (hashString(String(s)) >>> 0).toString(36);
+const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
+const xtraCache = new WeakMap();
+const daCache = new WeakMap();
+const blockExtras = t => {
+    const c = t.blocks;
+    const rev = blocksRevision(c);
+    const k = xtraCache.get(c);
+    let bx;
+    if (k && k.rev === rev && k.ref === c._blocks && tracksBlocksRevision()) bx = k.h;
+    else {
+        const b = c._blocks;
+        let s = '';
+        for (const id of Object.keys(b).sort()) {
+            const x = b[id];
+            if (hasUnstableId(x)) continue;
+            s += `${id}${x.topLevel ? `@${x.x},${x.y}` : ''}${x.shadow ? 's' : ''}${x.mutation ? JSON.stringify(x.mutation) : ''};`;
+        }
+        bx = fpH(s);
+        xtraCache.set(c, {rev, ref: c._blocks, h: bx});
+    }
+    let s = '';
+    for (const id of Object.keys(t.comments || {}).sort()) {
+        const m = t.comments[id];
+        s += `${id}|${m.text}|${m.x},${m.y},${m.width},${m.height}|${m.minimized ? 1 : 0}|${m.blockId || ''};`;
+    }
+    return bx + fpH(s);
+};
+const bcStyles = () => {
+    const store = bcStore();
+    if (!store) return null;
+    const out = {};
+    for (const id of Object.keys(store).sort()) {
+        const p = bcPick(store[id]);
+        if (Object.keys(p).length) out[id] = p;
+    }
+    return out;
+};
+const extIds = vm => {
+    const em = vm.extensionManager;
+    return em && em._loadedExtensions ? [...em._loadedExtensions.keys()].sort() : [];
+};
+const assetBytes = (vm, assetId) => {
+    for (const t of vm.runtime.targets) {
+        if (!t.isOriginal) continue;
+        for (const o of t.getCostumes().concat(t.sprite.sounds)) if (o.assetId === assetId && o.asset) return o.asset.data;
+    }
+    const fm = vm.runtime.fontManager;
+    const f = fm && fm.fonts.find(x => x.asset && x.asset.assetId === assetId);
+    return f ? f.asset.data : null;
+};
+const fpAreas = vm => {
+    const out = {};
+    const ts = originals(vm);
+    out.sp = fpH(ts.map(t => `${t.id}:${t.getName()}`).join('|'));
+    for (const t of ts) {
+        out[`c:${t.id}`] = fpH(t.getCostumes().map(c => `${c.name}|${c.assetId}|${c.dataFormat}|${r2(c.rotationCenterX)},${r2(c.rotationCenterY)}|${c.bitmapResolution || 1}`).join(';'));
+        out[`s:${t.id}`] = fpH(t.sprite.sounds.map(o => `${o.name}|${o.assetId}|${o.dataFormat}|${o.rate}|${o.sampleCount}`).join(';'));
+        if (t.blocks) out[`b:${t.id}`] = `${targetBlocksHash(t)}.${blockExtras(t)}`;
+    }
+    const sc = scenesCollab;
+    if (sc) {
+        out.sc = fpH(JSON.stringify(sc.ssnap()));
+        out.da = fpH(sc.assets.list.map(x => {
+            const b = sc.assets.bytes(x);
+            let h = b && daCache.get(b);
+            if (b && !h) { h = bytesHash(b); daCache.set(b, h); }
+            return `${x.id}|${x.name}|${x.ext}|${x.kind}|${h}`;
+        }).join(';'));
+    }
+    out.tm = fpH(JSON.stringify(vm.runtime.dimodTileMaps || null));
+    const fm = vm.runtime.fontManager;
+    if (fm) out.fo = fpH(fm.fonts.map(f => `${f.family}|${f.fallback}|${f.system ? 1 : 0}|${f.asset ? f.asset.assetId : ''}`).join(';'));
+    const bc = bcStyles();
+    if (bc) out.bc = fpH(JSON.stringify(bc));
+    out.ex = fpH(extIds(vm).join());
+    return out;
+};
+const tabOf = () => (window.dimodCollab ? window.dimodCollab.tabId : '');
+const bytesToText = b => new TextDecoder().decode(b);
+const loadBitmapInto = (vm, o, bytes, format) => new Promise(resolve => {
+    const url = URL.createObjectURL(new Blob([bytes], {type: `image/${format === 'jpg' ? 'jpeg' : format}`}));
+    const img = new Image();
+    img.onload = () => {
+        URL.revokeObjectURL(url);
+        const cv = document.createElement('canvas');
+        cv.width = img.width;
+        cv.height = img.height;
+        cv.getContext('2d').drawImage(img, 0, 0);
+        const res = o.bitmapResolution || 1;
+        try { vm.runtime.renderer.updateBitmapSkin(o.skinId, cv, res, [o.rotationCenterX / res, o.rotationCenterY / res]); } catch (e) {}
+        resolve();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+    img.src = url;
+});
+const setContent = (vm, kind, o, e, bytes) => {
+    const st = vm.runtime.storage;
+    if (kind === 'costume') {
+        if (e.dataFormat === 'svg') {
+            vm._updateSvg(o, bytesToText(bytes), e.rx, e.ry);
+            return null;
+        }
+        o.rotationCenterX = e.rx;
+        o.rotationCenterY = e.ry;
+        o.bitmapResolution = e.res || 1;
+        o.dataFormat = e.dataFormat;
+        o.asset = st.createAsset(st.AssetType.ImageBitmap, e.dataFormat, bytes, null, true);
+        o.assetId = o.asset.assetId;
+        o.md5 = `${o.assetId}.${o.dataFormat}`;
+        if (o.broken) delete o.broken;
+        return loadBitmapInto(vm, o, bytes, e.dataFormat);
+    }
+    return vm.runtime.audioEngine.audioContext.decodeAudioData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)).then(buf => {
+        const t = vm.runtime.targets.find(x => x.sprite && x.sprite.sounds.includes(o));
+        if (t && o.soundId) { try { t.sprite.soundBank.getSoundPlayer(o.soundId).buffer = buf; } catch (err) {} }
+        o.asset = st.createAsset(st.AssetType.Sound, e.dataFormat, bytes, null, true);
+        o.assetId = o.asset.assetId;
+        o.dataFormat = e.dataFormat;
+        o.md5 = `${o.assetId}.${o.dataFormat}`;
+        o.rate = e.rate;
+        o.sampleCount = e.sampleCount;
+        if (o.broken) delete o.broken;
+    }, () => null);
+};
+const okEntry = (kind, e) => e && isValidAssetName(e.name) && typeof e.assetId === 'string' &&
+    (kind === 'costume' ? ALLOWED_COSTUME_FORMATS.has(e.dataFormat) && Number.isFinite(e.rx) && Number.isFinite(e.ry) : ALLOWED_SOUND_FORMATS.has(e.dataFormat)) &&
+    (e.data === undefined || isValidAssetData(e.data));
+const healList = async (vm, t, kind, list) => {
+    if (!Array.isArray(list) || list.length > 5000 || !list.every(e => okEntry(kind, e))) return;
+    if (kind === 'costume' && !list.length) return;
+    const st = vm.runtime.storage;
+    const cur = listOf(t, kind).slice();
+    const shown = kind === 'costume' ? t.getCostumes()[t.currentCostume] : null;
+    const used = new Set();
+    const final = [];
+    const bytesOf = e => (typeof e.data === 'string' ? base64ToUint8(e.data) : assetBytes(vm, e.assetId));
+    const pick = f => cur.find(x => !used.has(x) && f(x));
+    list.forEach((e, i) => {
+        const o = (typeof e.uid === 'string' && pick(x => uidOf(x) === e.uid)) || pick(x => x.name === e.name) ||
+            pick(x => x.assetId === e.assetId && !list.some(y => y.name === x.name));
+        if (o) { used.add(o); final[i] = o; }
+    });
+    const jobs = [];
+    list.forEach((e, i) => {
+        const o = final[i];
+        if (!o) return;
+        const same = o.assetId === e.assetId && o.dataFormat === e.dataFormat && (kind !== 'costume' ||
+            (r2(o.rotationCenterX) === r2(e.rx) && r2(o.rotationCenterY) === r2(e.ry) && (o.bitmapResolution || 1) === (e.res || 1)));
+        if (same) return;
+        const bytes = bytesOf(e);
+        if (bytes) jobs.push(setContent(vm, kind, o, e, bytes));
+    });
+    for (let i = 0; i < list.length; i++) {
+        if (final[i]) continue;
+        const e = list[i];
+        const bytes = bytesOf(e);
+        if (!bytes) return;
+        const vec = e.dataFormat === 'svg';
+        const type = kind === 'costume' ? (vec ? st.AssetType.ImageVector : st.AssetType.ImageBitmap) : st.AssetType.Sound;
+        const asset = new st.Asset(type, null, st.DataFormat[e.dataFormat.toUpperCase()], bytes, true);
+        const md5 = `${asset.assetId}.${asset.dataFormat}`;
+        try {
+            if (kind === 'costume') {
+                await remotely(() => vm.addCostume(md5, {name: e.name, asset, rotationCenterX: e.rx, rotationCenterY: e.ry, bitmapResolution: e.res || 1}, t.id));
+            } else {
+                await remotely(() => vm.addSound({md5, asset, name: e.name, rate: e.rate, sampleCount: e.sampleCount}, t.id));
+            }
+        } catch (err) { return; }
+        const now = listOf(t, kind);
+        final[i] = now[now.length - 1];
+    }
+    await Promise.all(jobs);
+    remotely(() => {
+        const now = listOf(t, kind);
+        for (const o of now.slice()) {
+            if (final.includes(o)) continue;
+            goneAssets.add(o);
+            sentAssets.delete(o);
+            const i = listOf(t, kind).indexOf(o);
+            if (kind === 'costume') t.deleteCostume(i);
+            else t.deleteSound(i);
+        }
+        final.forEach((o, i) => {
+            o.name = list[i].name;
+            sentNames.set(o, o.name);
+            sentAssets.add(o);
+            if (typeof list[i].uid === 'string' && list[i].uid.length < 200) uids.set(o, list[i].uid);
+        });
+        if (kind === 'costume') {
+            t.sprite.costumes = final.slice();
+            const back = shown ? final.indexOf(shown) : -1;
+            t.setCostume(back !== -1 ? back : Math.min(t.currentCostume, final.length - 1));
+            const ed = vm.editingTarget === t ? final.length : 0;
+            for (let i = 0; i < ed; i++) notifyCostumeUpdated(t.id, i);
+        } else { t.sprite.sounds = final.slice(); }
+        vm.runtime.emitProjectChanged();
+        vm.emitTargetsUpdate();
+    });
+};
+const healSprites = async (vm, state) => {
+    if (!state || !Array.isArray(state.list) || state.list.length > 2000) return;
+    const want = state.list.filter(x => x && typeof x.id === 'string' && typeof x.name === 'string' && x.name);
+    const ids = new Set(want.map(x => x.id));
+    for (const t of originals(vm)) if (!t.isStage && !ids.has(t.id)) remotely(() => vm.deleteSprite(t.id));
+    const sprites = state.sprites && typeof state.sprites === 'object' ? state.sprites : {};
+    for (let i = 0; i < want.length; i++) {
+        const x = want[i];
+        if (vm.runtime.getTargetById(x.id) || typeof sprites[x.id] !== 'string') continue;
+        try { await applyRemoteTargetCreate(vm, {targetId: x.id, sprite: sprites[x.id], name: x.name, after: i ? want[i - 1].id : null}); } catch (e) {}
+    }
+    const wrong = want.filter(x => { const t = vm.runtime.getTargetById(x.id); return t && !t.isStage && t.getName() !== x.name; });
+    remotely(() => {
+        wrong.forEach((x, i) => vm.renameSprite(x.id, `${x.name} ${i}~`));
+        wrong.forEach(x => vm.renameSprite(x.id, x.name));
+    });
+    await applyRemoteTargetReorder(vm, {order: want.map(x => x.id)});
+};
+const healFonts = (vm, list) => {
+    const fm = vm.runtime.fontManager;
+    if (!fm || !Array.isArray(list) || list.length > 500) return;
+    const st = vm.runtime.storage;
+    const add = [];
+    for (const f of list) {
+        if (!f || typeof f.family !== 'string' || typeof f.fallback !== 'string') return;
+        if (f.system) { add.push(f); continue; }
+        if (!FONT_FORMATS.has(f.dataFormat)) return;
+        const bytes = typeof f.data === 'string' ? base64ToUint8(f.data) : assetBytes(vm, f.assetId);
+        if (!bytes) return;
+        add.push({...f, asset: st.createAsset(st.AssetType.Font, f.dataFormat, bytes, null, true)});
+    }
+    remotely(() => {
+        while (fm.fonts.length) fm.deleteFont(fm.fonts.length - 1);
+        for (const f of add) {
+            if (f.system) fm.addSystemFont(f.family, f.fallback);
+            else fm.addCustomFont(f.family, f.fallback, f.asset);
+        }
+    });
+};
+const healBc = styles => {
+    const store = bcStore();
+    if (!store || !styles || typeof styles !== 'object') return;
+    const spot = cmtSpot();
+    for (const id of Object.keys(store)) {
+        if (styles[id] || !Object.keys(bcPick(store[id])).length) continue;
+        BC_KEYS.forEach(k => delete store[id][k]);
+        cmt.bcSeen.set(id, JSON.stringify(bcPick(store[id])));
+    }
+    for (const id of Object.keys(styles)) {
+        const c = spot && (spot.ws.commentDB_ || {})[id];
+        const base = store[id] || {ID: id, XY: c ? c.getXY() : {x: 0, y: 0}};
+        BC_KEYS.forEach(k => delete base[k]);
+        store[id] = Object.assign(base, bcPick(styles[id]));
+        cmt.bcSeen.set(id, JSON.stringify(bcPick(store[id])));
+        if (c && document.activeElement !== c.textarea_) bcRefresh(spot.ws, id);
+    }
+    if (cmt.vm) cmt.vm.runtime.emitProjectChanged();
+};
+class Converge {
+    constructor (vm) {
+        this.vm = vm;
+        this.peers = new Map();
+        this.mine = {};
+        this.at = {};
+        this.streak = {};
+        this.cool = {};
+        this.back = {};
+        this.pend = new Map();
+        this.born = Date.now();
+        this.running = false;
+        this.asked = false;
+        this.attached = null;
+        this.off = null;
+        this.heals = 0;
+        vm.runtime.on('PROJECT_RUN_START', () => { this.running = true; });
+        vm.runtime.on('PROJECT_RUN_STOP', () => { this.running = false; });
+        setInterval(() => this.round(), FP_MS);
+    }
+    attach () {
+        const c = window.dimodCollab;
+        if (!c || c === this.attached) return;
+        if (this.off) this.off();
+        this.attached = c;
+        this.off = c.addMessageListener(msg => { try { this.onMessage(msg); } catch (e) { log.warn('collab converge', e); } });
+    }
+    busy () {
+        const vm = this.vm;
+        return !vm.__dimodProjectFullyLoaded || this.running || !!vm.runtime.sequencer.activeThread || vm.dimodRemoteTargetCreates > 0 ||
+            syncRemote > 0 || (scenesCollab && scenesCollab.quiet > 0);
+    }
+    round () {
+        this.attach();
+        const c = window.dimodCollab;
+        if (!c || !c.joined || !c.peerCount || this.busy()) return;
+        let areas;
+        try { areas = fpAreas(this.vm); } catch (e) { return; }
+        const now = Date.now();
+        for (const k in areas) if (this.mine[k] !== areas[k]) this.at[k] = now;
+        this.mine = areas;
+        const top = fpH(Object.keys(areas).sort().map(k => k + areas[k]).join());
+        for (const [tab, p] of this.peers) if (now - p.seen > FP_MS * 5) this.peers.delete(tab);
+        const off = [...this.peers.values()].filter(p => p.top !== top);
+        const want = off.some(p => p.areasTop !== p.top);
+        c.send('workspace-health', {fp: 1, top, age: now - this.born, areas: off.length || this.asked ? areas : undefined, want: want || undefined});
+        this.asked = false;
+        this.top = top;
+        if (off.length) this.compare(now);
+    }
+    compare (now) {
+        const voters = [{tab: tabOf(), age: now - this.born, areas: this.mine}];
+        for (const [tab, p] of this.peers) if (p.areas && p.areasTop === p.top) voters.push({tab, age: p.age + (now - p.seen), areas: p.areas});
+        if (voters.length < 2) return;
+        const keys = new Set();
+        voters.forEach(v => Object.keys(v.areas).forEach(k => keys.add(k)));
+        for (const k of keys) {
+            const vs = voters.filter(v => typeof v.areas[k] === 'string');
+            if (!(k in this.mine) || new Set(vs.map(v => v.areas[k])).size < 2) { delete this.streak[k]; continue; }
+            const core = k.startsWith('b:') && new Set(vs.map(v => v.areas[k].split('.')[0])).size > 1;
+            const sig = vs.map(v => `${v.tab}=${v.areas[k]}`).sort().join();
+            const st = this.streak[k];
+            const n = st && st.sig === sig ? st.n + 1 : 1;
+            this.streak[k] = {sig, n};
+            if (n < (core ? FP_STABLE * 5 : FP_STABLE)) continue;
+            const groups = new Map();
+            for (const v of vs) {
+                const g = groups.get(v.areas[k]) || {val: v.areas[k], votes: 0, tabs: []};
+                if (v.age > FP_SETTLE_MS || vs.every(x => x.age <= FP_SETTLE_MS)) g.votes++;
+                g.tabs.push(v.tab);
+                groups.set(v.areas[k], g);
+            }
+            const win = [...groups.values()].sort((a, b) => (b.votes - a.votes) || (a.tabs.sort()[0] < b.tabs.sort()[0] ? -1 : 1))[0];
+            if (win.val === this.mine[k] || now - (this.at[k] || 0) < FP_QUIET_MS || (this.cool[k] || 0) > now) continue;
+            const src = win.tabs.filter(t => t !== tabOf()).sort()[0];
+            if (src) this.ask(k, src, now);
+        }
+    }
+    ask (k, tab, now) {
+        const back = this.back[k] = Math.min((this.back[k] || 2500) * 2, 60000);
+        this.cool[k] = now + back;
+        if (k === 'sc' || k === 'da') {
+            if (!scenesCollab) return;
+            this.cool.sc = this.cool.da = now + back;
+            scenesCollab.ask(tab);
+            log.warn(`collab: ${k} out of sync, pulling from a peer`);
+            return;
+        }
+        const vm = this.vm;
+        const rid = Math.random().toString(36).slice(2);
+        const id = k.slice(2);
+        let have;
+        if (k.startsWith('c:') || k.startsWith('s:')) {
+            const t = vm.runtime.getTargetById(id);
+            if (!t) return;
+            have = [...new Set(originals(vm).flatMap(x => listOf(x, k[0] === 'c' ? 'costume' : 'sound').map(o => o.assetId)))];
+        } else if (k === 'sp') have = originals(vm).map(t => t.id);
+        else if (k === 'fo') have = vm.runtime.fontManager.fonts.filter(f => f.asset).map(f => f.asset.assetId);
+        this.pend.set(rid, {k, hv: this.mine[k], at: now});
+        log.warn(`collab: ${k} out of sync, pulling from a peer`);
+        window.dimodCollab.send('blocks-state-request', {area: k, rid, toTab: tab, have});
+    }
+    async answer (msg) {
+        const vm = this.vm;
+        const k = msg.area;
+        const have = new Set(Array.isArray(msg.have) ? msg.have : []);
+        const id = k.slice(2);
+        const t = k[1] === ':' ? vm.runtime.getTargetById(id) : null;
+        let state = null;
+        if (k.startsWith('b:') && t) state = serializeTargetBlocks(vm, t);
+        else if (k.startsWith('c:') && t) {
+            state = {list: t.getCostumes().map(o => ({name: o.name, uid: uidOf(o), assetId: o.assetId, dataFormat: o.dataFormat, rx: o.rotationCenterX, ry: o.rotationCenterY,
+                res: o.bitmapResolution || 1, data: have.has(o.assetId) || !o.asset ? undefined : uint8ToBase64(o.asset.data)}))};
+        } else if (k.startsWith('s:') && t) {
+            state = {list: t.sprite.sounds.map(o => ({name: o.name, uid: uidOf(o), assetId: o.assetId, dataFormat: o.dataFormat, rate: o.rate, sampleCount: o.sampleCount,
+                data: have.has(o.assetId) || !o.asset ? undefined : uint8ToBase64(o.asset.data)}))};
+        } else if (k === 'sp') {
+            const ts = originals(vm).filter(x => !x.isStage);
+            const sprites = {};
+            for (const x of ts) if (!have.has(x.id)) sprites[x.id] = await vm.exportSprite(x.id, 'base64');
+            state = {list: ts.map(x => ({id: x.id, name: x.getName()})), sprites};
+        } else if (k === 'tm') state = {doc: JSON.stringify(vm.runtime.dimodTileMaps || null)};
+        else if (k === 'fo') {
+            state = {list: vm.runtime.fontManager.fonts.map(f => ({family: f.family, fallback: f.fallback, system: !!f.system,
+                dataFormat: f.asset ? f.asset.dataFormat : null, assetId: f.asset ? f.asset.assetId : null,
+                data: f.asset && !have.has(f.asset.assetId) ? uint8ToBase64(f.asset.data) : undefined}))};
+        } else if (k === 'bc') state = {styles: bcStyles()};
+        else if (k === 'ex') {
+            let urls = {};
+            try { urls = vm.extensionManager.getExtensionURLs(); } catch (e) {}
+            state = {ids: extIds(vm), urls};
+        }
+        if (state && window.dimodCollab) window.dimodCollab.send('blocks-state', {area: k, rid: msg.rid, toTab: msg.fromTab, state});
+    }
+    take (msg) {
+        const p = this.pend.get(msg.rid);
+        if (!p || p.k !== msg.area) return;
+        this.pend.delete(msg.rid);
+        const vm = this.vm;
+        if (this.busy() || Date.now() - p.at > 15000) return;
+        let cur;
+        try { cur = fpAreas(vm)[p.k]; } catch (e) { return; }
+        if (cur !== p.hv || !msg.state) return;
+        const k = p.k;
+        const s = msg.state;
+        const id = k.slice(2);
+        const t = k[1] === ':' ? vm.runtime.getTargetById(id) : null;
+        const ws = scopes.get('code') && scopes.get('code').getWorkspace();
+        if (k.startsWith('b:')) {
+            if (!t) return;
+            const onScreen = vm.editingTarget === t;
+            if (onScreen && (isUserTyping(ScratchBlocks) || (ws && hasActiveGesture(ws)))) { this.cool[k] = 0; return; }
+            if (!applyTargetBlocks(vm, {...s, targetId: t.id})) return;
+            if (onScreen) runAsRemote(() => vm.refreshWorkspace());
+        } else if (k.startsWith('c:') || k.startsWith('s:')) {
+            if (!t) return;
+            if (k.startsWith('c:') && vm.editingTarget === t && isPaintGestureActive()) { this.cool[k] = 0; return; }
+            queued(() => healList(vm, t, k[0] === 'c' ? 'costume' : 'sound', s.list)).catch(e => log.warn('collab: list heal failed', e));
+        } else if (k === 'sp') healSprites(vm, s).catch(e => log.warn('collab: sprite heal failed', e));
+        else if (k === 'tm') {
+            if (typeof s.doc !== 'string') return;
+            let raw;
+            try { raw = JSON.parse(s.doc); } catch (e) { return; }
+            vm.runtime.dimodTileMaps = raw ? normalizeTileDoc(raw) : raw;
+            vm.runtime.emit(TILEMAPS_CHANGED, {});
+            vm.runtime.emitProjectChanged();
+        } else if (k === 'fo') healFonts(vm, s.list);
+        else if (k === 'bc') healBc(s.styles);
+        else if (k === 'ex') {
+            const c = window.dimodCollab;
+            const urls = s.urls && typeof s.urls === 'object' ? s.urls : {};
+            for (const x of Array.isArray(s.ids) ? s.ids : []) {
+                if (typeof x !== 'string' || vm.extensionManager.isExtensionLoaded(x) || !c || !c.onExtensionImport) continue;
+                c.onExtensionImport({url: typeof urls[x] === 'string' ? urls[x] : x, _isInitialSync: true});
+            }
+        }
+        this.heals++;
+        log.warn(`collab: healed ${k} from a peer`);
+    }
+    onMessage (msg) {
+        const c = window.dimodCollab;
+        if (msg.type === 'joined') { this.born = Date.now(); this.peers.clear(); return; }
+        if (msg.type === 'workspace-health' && msg.fp && typeof msg.fromTab === 'string') {
+            const p = this.peers.get(msg.fromTab) || {};
+            p.seen = Date.now();
+            p.top = String(msg.top);
+            p.age = Number(msg.age) || 0;
+            if (msg.areas && typeof msg.areas === 'object') { p.areas = msg.areas; p.areasTop = p.top; }
+            this.peers.set(msg.fromTab, p);
+            if (msg.want) this.asked = true;
+            if (p.top === this.top) for (const k in this.back) delete this.back[k];
+            return;
+        }
+        if (!c || msg.toTab !== c.tabId || typeof msg.area !== 'string') return;
+        if (msg.type === 'blocks-state-request') this.answer(msg).catch(e => log.warn('collab converge answer', e));
+        else if (msg.type === 'blocks-state') this.take(msg);
+    }
+}
+let converge = null;
 const quietAssets = fn => {
     const c = scenesCollab;
     if (!c) return fn();
@@ -2376,6 +2894,7 @@ const quietAssets = fn => {
 const installScenesCollab = vm => {
     installCollabHooks(vm);
     if (!scenesCollab && vm.dimodScenes && vm.dimodAssets && typeof window !== 'undefined') { scenesCollab = new ScenesAssetsCollab(vm); window.dimodScenesCollab = scenesCollab; }
+    if (!converge && typeof window !== 'undefined') { converge = new Converge(vm); window.dimodConverge = converge; }
     return scenesCollab;
 };
 export {ScenesAssetsCollab, installScenesCollab, installCollabHooks, remotely, broadcastTileMaps, quietAssets, UNSTABLE_ID_OPCODES, abandonGesture, allTargetHashes, applyRemoteAssetUpdate, applyRemoteBlocksShared, applyRemoteTargetCreate, applyRemoteTargetDelete, applyRemoteTargetRename, applyRemoteTargetReorder, applyTargetBlocks, attachShadowRef, broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeOrder, broadcastCostumeRename, broadcastCostumeUpdate, broadcastSoundAdd, broadcastSoundDelete, broadcastSoundOrder, broadcastSoundRename, broadcastSoundUpdate, broadcastTargetCreate, broadcastTargetDelete, broadcastTargetRename, broadcastTargetReorder, clearRemoteEdited, computeBlocksHash as collabWorkspaceHealthDefault, colorForUserId, computeBlocksFingerprint, computeBlocksHash, contrastTextColor, dimodDragState, ensureEventVariables, findShadowRef, flushCostumeBroadcast, getRemoteEditedNames, handleRemotePaintPacket, hasActiveGesture, hasUnstableId, installBlockStateResponder, installCommentCollab, installConnectSafetyRails, installDragPreviewHook, installFieldCarets, installGestureRecovery, installPaintCollab, isApplyingRemotePaint, isLivePaintCostume, isPaintGestureActive, registerFieldCaretScope, repairAskewBlocks, resolveIncomingEvent, resolveShadowRef, resumePaintCollab, sanitizePreviewSvg, setAssetOrder, shareBlocksToTargetWithSync, suspendPaintCollab, targetBlocksHash, uninstallPaintCollab};

@@ -40,7 +40,7 @@ import {
 } from '../dimod/render';
 import {exportOptions, injectDocIntoSvg, syncDocFromItems} from '../dimod/items';
 import {getDoc} from '../dimod/store';
-import {commitLocalChanges} from '../dimod/collab';
+import {commitLocalChanges, noteBitmapCommit} from '../dimod/collab';
 
 const UpdateImageHOC = function (WrappedComponent) {
     class UpdateImageWrapper extends React.Component {
@@ -173,6 +173,7 @@ const UpdateImageHOC = function (WrappedComponent) {
                     );
                 }
             }
+            noteBitmapCommit(plasteredRaster);
             const rect = getHitBounds(plasteredRaster);
 
             // Use 1x1 instead of 0x0 for getting imageData since paper.js automagically

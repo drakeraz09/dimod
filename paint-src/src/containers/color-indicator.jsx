@@ -9,6 +9,7 @@ import Formats, {isBitmap} from '../lib/format';
 import GradientTypes from '../lib/gradient-types';
 
 import ColorIndicatorComponent from '../components/color-indicator.jsx';
+import {liveCommit} from '../dimod/collab';
 import {applyColorToSelection,
     applyGradientTypeToSelection,
     applyStrokeWidthToSelection,
@@ -76,6 +77,7 @@ const makeColorIndicator = (label, isStroke) => {
                 isStroke || (formatIsBitmap && !this.props.fillBitmapShapes),
                 this.props.textEditTarget);
             this._hasChanged = this._hasChanged || isDifferent;
+            if (isDifferent) liveCommit(!isBitmap(this.props.format));
             this.props.onChangeColor(newColor, this.props.colorIndex);
         }
         handleChangeGradientType (gradientType) {
@@ -86,6 +88,7 @@ const makeColorIndicator = (label, isStroke) => {
                 isStroke || (formatIsBitmap && !this.props.fillBitmapShapes),
                 this.props.textEditTarget);
             this._hasChanged = this._hasChanged || isDifferent;
+            if (isDifferent) liveCommit(!isBitmap(this.props.format));
             const hasSelectedItems = getSelectedLeafItems().length > 0;
             if (hasSelectedItems) {
                 if (isDifferent) {
@@ -121,6 +124,7 @@ const makeColorIndicator = (label, isStroke) => {
                     this.props.textEditTarget);
                 this.props.setSelectedItems(this.props.format);
                 this._hasChanged = this._hasChanged || isDifferent;
+                if (isDifferent) liveCommit(!isBitmap(this.props.format));
             } else {
                 let color1 = this.props.color;
                 let color2 = this.props.color2;

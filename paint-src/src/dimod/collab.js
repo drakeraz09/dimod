@@ -1,8 +1,12 @@
 import paper from '@turbowarp/paper';
 import {ensureDid, getDoc, getItemByDid, getPaintingLayer, rebuildIndex, setDoc} from './store';
 import {applyItemData} from './items';
-import {createDoc, deserializeDoc, serializeDoc, getDid} from './core';
-const PREVIEW_INTERVAL_MS = 50;
+import {addRemoteBrush, createDoc, customBrushFor, deserializeDoc, serializeDoc, getDid} from './core';
+import {getRaster} from '../helper/layer';
+const PREVIEW_INTERVAL_MS = 55;
+const PREVIEW_LINGER_MS = 1200;
+const PREVIEW_KEEPALIVE_MS = 1000;
+const TRAIL_TOOLS = new Set(['BRUSH', 'ERASER', 'BIT_BRUSH', 'BIT_ERASER']);
 const CURSOR_INTERVAL_MS = 60;
 const SELECTION_POLL_MS = 200;
 const PEER_TIMEOUT_MS = 20000;
@@ -25,6 +29,8 @@ let _docDirty = false;
 let _remoteLog = [];
 let _remoteSeq = 0;
 let _gesture = null;
+let _liveSource = null;
+const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
 let _previewTimer = null;
 const _peers = new Map();
 const _peerListeners = new Set();
@@ -52,10 +58,10 @@ const peerRecord = function (peerId, packet) {
 };
 const clearPeerPreview = function (peerId) {
     const peer = _peers.get(peerId);
-    if (peer) peer.preview = null;
+    if (peer && peer.preview) { peer.doneG = peer.preview.g; peer.preview = null; }
     notifyPeers();
 };
-const isTrackingGesture = () => !!_gesture && !_gesture.isVector;
+const isTrackingGesture = () => !!_gesture && !_gesture.isVector && (!_gesture.sticky || _gesture.sentAny);
 const stopGesture = function () {
     if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
     _gesture = null;
@@ -119,6 +125,8 @@ const resetCollab = function () {
     _remoteLog = [];
     _remoteSeq = 0;
     _lastSelectionKey = null;
+    _bitmapBase = null;
+    _patchState = {pid: null, clean: true};
     stopGesture();
     _peers.clear();
     notifyPeers();
@@ -151,10 +159,17 @@ const rewriteSources = function (json, map) {
     if (typeof json.source === 'string' && map.has(json.source)) json.source = map.get(json.source);
     Object.keys(json).forEach(key => rewriteSources(json[key], map));
 };
+const unselect = function (json) {
+    if (Array.isArray(json)) { json.forEach(unselect); return; }
+    if (!json || typeof json !== 'object') return;
+    if ('selected' in json) delete json.selected;
+    Object.keys(json).forEach(key => unselect(json[key]));
+};
 const serializeItem = function (item) {
-    const json = item.exportJSON({asString: false});
+    const json = item.exportJSON({asString: false, precision: 16});
     const map = portableSources(item);
     if (map.size) rewriteSources(json, map);
+    unselect(json);
     return json;
 };
 const identifiedItems = function () { return contentItems().map(item => ({did: ensureDid(item), item})); };
@@ -195,12 +210,33 @@ const diffAgainstBaseline = function () {
     if (doc !== _baselineDoc) ops.push({op: 'doc', doc});
     return ops;
 };
+const usedBrushes = function () {
+    const out = new Map();
+    const visit = node => {
+        const ls = node.data && node.data.dimodLine;
+        if (ls && ls.type === 'BRUSH' && typeof ls.brush === 'string' && ls.brush.indexOf('T:') !== 0 && !out.has(ls.brush)) {
+            const b = customBrushFor(ls.brush);
+            if (b && !b.builtin) out.set(ls.brush, {id: b.id, name: b.name, mask: b.mask, svg: b.svg || null, spacing: b.spacing, scatter: b.scatter});
+        }
+        if (node.children) node.children.forEach(visit);
+    };
+    contentItems().forEach(visit);
+    return out.size ? [...out.values()] : undefined;
+};
 const commitLocalChanges = function (isVector) {
     if (!isCollabActive() || _applyingRemote || !isVector) return;
-    if (_baseline === null) { send(buildReset()); captureBaseline(); return; }
+    if (_baseline === null) { send(Object.assign(buildReset(), {brushes: usedBrushes()})); captureBaseline(); return; }
     const ops = diffAgainstBaseline();
     captureBaseline();
-    if (ops.length) send({op: 'ops', ops});
+    if (ops.length) { send({op: 'ops', ops, brushes: usedBrushes()}); renewGesture(); }
+};
+let _liveTimer = null;
+const liveCommit = function (isVector) {
+    if (_liveTimer || !isCollabActive() || !isVector) return;
+    _liveTimer = setTimeout(() => {
+        _liveTimer = null;
+        commitLocalChanges(true);
+    }, 70);
 };
 const importItem = function (json) {
     const item = paper.Base.importJSON(json);
@@ -254,6 +290,7 @@ const applyOp = function (op, imported = []) {
         return true;
     }
     if (op.op === 'doc') { applyDoc(op.doc); return true; }
+    if (op.op === 'bpatch') return applyPatch(op);
     return true;
 };
 const logRemote = function (op) {
@@ -325,13 +362,49 @@ const applyOps = function (ops, {log = false, settle = true} = {}) {
 };
 const receivePreview = function (packet, fromId) {
     if (!fromId) return;
-    peerRecord(fromId, packet).preview = {
-        svg: packet.svg || null,
-        dataUrl: packet.dataUrl || null,
-        rect: packet.rect || null,
-        at: Date.now()
-    };
+    const peer = peerRecord(fromId, packet);
+    let pv = peer.preview;
+    const g = packet.g || 0;
+    if (g && peer.doneG === g) return;
+    if (!pv || pv.g !== g || pv.endedAt) { pv = {g, items: new Map(), tiles: [], set: null, trail: null, rev: 0, bytes: 0}; peer.preview = pv; }
+    pv.at = Date.now();
+    pv.tool = packet.tool || null;
+    let rev = false;
+    if (packet.svg && !packet.items) packet = Object.assign({}, packet, {items: [{k: 0, svg: packet.svg}], ks: [0]});
+    if (packet.dataUrl && packet.rect && !packet.tiles) packet = Object.assign({}, packet, {set: {d: packet.dataUrl, x: packet.rect.x, y: packet.rect.y, w: packet.rect.width, h: packet.rect.height}});
+    if (Array.isArray(packet.ks)) {
+        for (const k of [...pv.items.keys()]) if (packet.ks.indexOf(k) < 0) { pv.items.delete(k); rev = true; }
+    }
+    for (const it of packet.items || []) {
+        let cur = pv.items.get(it.k);
+        if (it.svg) { cur = {svg: it.svg, m: [1, 0, 0, 1, 0, 0], v: (cur ? cur.v : 0) + 1, gk: typeof it.gk === 'string' ? it.gk : null, p: null}; pv.items.set(it.k, cur); rev = true; }
+        if (cur && it.m) cur.m = it.m;
+        if (cur && cur.gk && Array.isArray(it.p)) cur.p = it.p;
+    }
+    for (const t of packet.tiles || []) {
+        if (pv.tiles.length > 600 || pv.bytes > 6e6) break;
+        pv.tiles.push(t);
+        pv.bytes += t.d.length;
+        rev = true;
+    }
+    if (packet.set) { pv.set = packet.set; rev = true; }
+    if (packet.trail) {
+        const tr = packet.trail;
+        if (!pv.trail || tr.from === 0) pv.trail = {p: [], w: tr.w};
+        if (tr.from === pv.trail.p.length / 2 && pv.trail.p.length < 8000) { pv.trail.p.push(...tr.p); pv.trail.w = tr.w; rev = true; }
+    }
+    if (rev) pv.rev++;
     notifyPeers();
+};
+const endPeerPreview = function (fromId) {
+    const peer = _peers.get(fromId);
+    if (peer && peer.preview) { peer.preview.endedAt = Date.now(); notifyPeers(); }
+};
+const keepPeers = function (ids) {
+    const keep = new Set((ids || []).map(String));
+    let gone = false;
+    for (const id of [..._peers.keys()]) if (!keep.has(String(id))) { _peers.delete(id); gone = true; }
+    if (gone) notifyPeers();
 };
 const receiveCursor = function (packet, fromId) {
     if (!fromId) return;
@@ -352,16 +425,13 @@ const receivePacket = function (packet, fromId) {
     if (packet.op === 'preview') { receivePreview(packet, fromId); return; }
     if (packet.op === 'cursor') { receiveCursor(packet, fromId); return; }
     if (packet.op === 'selection') { receiveSelection(packet, fromId); return; }
-    if (packet.op === 'preview-end') {
-        const peer = _peers.get(fromId);
-        if (peer) peer.preview = null;
-        notifyPeers();
-        return;
-    }
+    if (packet.op === 'preview-end') { endPeerPreview(fromId); return; }
+    if (packet.op === 'bpatch') { receivePatch(packet, fromId); return; }
     if (packet.op === 'resync-request') {
-        if (_baseline !== null) send(buildReset());
+        if (_baseline !== null) send(Object.assign(buildReset(), {brushes: usedBrushes()}));
         return;
     }
+    if (Array.isArray(packet.brushes)) packet.brushes.slice(0, 20).forEach(addRemoteBrush);
     if (packet.op === 'reset') {
         applyOps([{op: 'reset', items: packet.items, doc: packet.doc}], {log: true});
         clearPeerPreview(fromId);
@@ -395,11 +465,14 @@ const getPeers = function () {
     const now = Date.now();
     for (const [peerId, peer] of _peers) {
         if (now - peer.seenAt > PEER_TIMEOUT_MS) { _peers.delete(peerId); continue; }
-        if (peer.preview && now - peer.preview.at > PREVIEW_TIMEOUT_MS) peer.preview = null;
+        if (peer.preview && (now - peer.preview.at > PREVIEW_TIMEOUT_MS || (peer.preview.endedAt && now - peer.preview.endedAt > PREVIEW_LINGER_MS))) peer.preview = null;
     }
     return [..._peers.values()];
 };
-const setLocalTool = function (tool) { _localTool = tool || null; };
+const setLocalTool = function (tool) {
+    if ((tool || null) !== _localTool && _gesture) endGesture();
+    _localTool = tool || null;
+};
 const shouldSampleCursor = function () {
     if (!isCollabActive() || !_costume) return false;
     return Date.now() - _lastCursorSentAt >= CURSOR_INTERVAL_MS;
@@ -414,72 +487,377 @@ const hotItems = function () {
     if (!layer || !_gesture) return [];
     const hot = [];
     const taken = new Set();
-    const consider = item => {
-        if (!item || taken.has(item.id) || item.guide || item.isClipMask()) return;
+    const main = _gesture.isVector ? null : getRaster();
+    const consider = (item, guide) => {
+        if (!item || item === main || taken.has(item.id) || (item.guide && !guide) || item.isClipMask()) return;
         taken.add(item.id);
         hot.push(item);
     };
     for (const item of layer.children) {
-        if (!_gesture.startIds.has(item.id)) consider(item);
+        if (!_gesture.startIds.has(item.id) || item.id === _gesture.focusId) consider(item);
     }
     for (const selected of paper.project.selectedItems) {
         let top = selected;
         while (top.parent && top.parent !== layer) top = top.parent;
         if (top.parent === layer) consider(top);
     }
+    for (const item of guideSources()) if (!item.data.collabTiles) consider(item, true);
     return hot.slice(0, PREVIEW_MAX_ITEMS);
 };
-const sampleVectorPreview = function () {
-    const items = hotItems();
-    if (!items.length) return null;
-    let markup = '';
-    for (const item of items) {
-        let node;
-        try { node = item.exportSVG({asString: true}); } catch (e) { continue; }
-        if (typeof node !== 'string') continue;
-        markup += node;
-        if (markup.length > PREVIEW_MAX_BYTES) return null;
+const guideSources = function () {
+    const out = [];
+    for (const layer of paper.project.layers) {
+        if (!layer.data || !layer.data.isGuideLayer) continue;
+        for (const item of layer.children) if (item.data && (item.data.collabTiles || item.data.collabPreview) && item.visible) out.push(item);
     }
-    return markup || null;
+    return out;
 };
-const sampleBitmapPreview = function (getRaster) {
-    if (!_gesture || !_gesture.dirty) return null;
-    const raster = getRaster && getRaster();
-    if (!raster || !raster.loaded) return null;
-    const rect = _gesture.dirty.expand(BITMAP_DIRTY_PAD).intersect(raster.bounds);
-    if (!rect || rect.width < 1 || rect.height < 1) return null;
+const toLayer = function (node, point, layer) {
+    let q = point;
+    let n = node;
+    while (n && n !== layer && n.matrix) { q = n.matrix.transform(q); n = n.parent; }
+    return q;
+};
+const refPoints = function (item) {
+    const layer = item.parent;
+    const pts = [];
+    let sig = '';
+    const colorKey = c => {
+        if (!c) return '-';
+        if (c.gradient) return `g${c.gradient.stops.map(st => st.color.toCSS(true) + st.offset).join()}${c.origin}${c.destination}`;
+        return c.toCSS ? c.toCSS(true) : String(c);
+    };
+    const visit = node => {
+        if (pts.length >= 24) return;
+        sig += `${colorKey(node.fillColor)}${colorKey(node.strokeColor)}${node.strokeWidth}${node.opacity}${node.visible ? '' : 'h'}${typeof node.content === 'string' ? node.content.length + node.content.slice(0, 40) : ''}|`;
+        if (node.segments) {
+            const n = node.segments.length;
+            sig += n + ',';
+            const picks = n <= 4 ? node.segments : [node.segments[0], node.segments[n >> 2], node.segments[n >> 1], node.segments[(n * 3) >> 2]];
+            for (const seg of picks) { const q = toLayer(node, seg.point, layer); pts.push(q.x, q.y); }
+            return;
+        }
+        if (node.children && node.children.length) { sig += 'g' + node.children.length + ','; node.children.forEach(visit); return; }
+        const w = (node.size && node.size.width) || node.width || 10;
+        const h = (node.size && node.size.height) || node.height || 10;
+        sig += 'l' + Math.round(w) + 'x' + Math.round(h) + ',';
+        for (const [x, y] of [[0, 0], [w / 2, 0], [0, h / 2], [w / 2, h / 2]]) { const q = toLayer(node, new paper.Point(x, y), layer); pts.push(q.x, q.y); }
+    };
+    visit(item);
+    return {pts, sig};
+};
+const solveAffine = function (from, to) {
+    const n = from.length / 2;
+    if (n < 4 || to.length !== from.length) return null;
+    let sxx = 0, sxy = 0, syy = 0, sx = 0, sy = 0;
+    const bx = [0, 0, 0], by = [0, 0, 0];
+    for (let i = 0; i < n; i++) {
+        const x = from[i * 2], y = from[(i * 2) + 1], u = to[i * 2], v = to[(i * 2) + 1];
+        sxx += x * x; sxy += x * y; syy += y * y; sx += x; sy += y;
+        bx[0] += x * u; bx[1] += y * u; bx[2] += u;
+        by[0] += x * v; by[1] += y * v; by[2] += v;
+    }
+    const M = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]];
+    const det3 = A => (A[0][0] * ((A[1][1] * A[2][2]) - (A[1][2] * A[2][1]))) - (A[0][1] * ((A[1][0] * A[2][2]) - (A[1][2] * A[2][0]))) + (A[0][2] * ((A[1][0] * A[2][1]) - (A[1][1] * A[2][0])));
+    const D = det3(M);
+    let a, c, e, b, d, f;
+    if (Math.abs(D) < 1e-6) {
+        a = 1; c = 0; b = 0; d = 1;
+        e = (bx[2] - sx) / n; f = (by[2] - sy) / n;
+    } else {
+        const solve = B => [0, 1, 2].map(col => det3(M.map((row, r) => row.map((val, j) => (j === col ? B[r] : val)))) / D);
+        [a, c, e] = solve(bx);
+        [b, d, f] = solve(by);
+    }
+    let span = 1;
+    for (let i = 0; i < n; i++) span = Math.max(span, Math.abs(from[i * 2] - from[0]), Math.abs(from[(i * 2) + 1] - from[1]));
+    const tol = 0.02 + (span * 0.002);
+    for (let i = 0; i < n; i++) {
+        const x = from[i * 2], y = from[(i * 2) + 1];
+        if (Math.abs((a * x) + (c * y) + e - to[i * 2]) > tol || Math.abs((b * x) + (d * y) + f - to[(i * 2) + 1]) > tol) return null;
+    }
+    return [a, b, c, d, e, f].map(z => Math.round(z * 10000) / 10000);
+};
+const geoOf = function (item) {
+    if (!(item instanceof paper.Path || item instanceof paper.CompoundPath) || !item.matrix.isIdentity()) return null;
+    const subs = item instanceof paper.CompoundPath ? item.children : [item];
+    let key = '';
+    const p = [];
+    for (const s of subs) {
+        if (!(s instanceof paper.Path) || !s.matrix.isIdentity()) return null;
+        key += `${s.closed ? 'c' : 'o'}${s.segments.length},`;
+        for (const seg of s.segments) p.push(seg.point.x, seg.point.y, seg.handleIn.x, seg.handleIn.y, seg.handleOut.x, seg.handleOut.y);
+        if (p.length > 1200) return null;
+    }
+    return {key, p: p.map(z => Math.round(z * 100) / 100)};
+};
+const samePts = (a, b) => a.sig === b.sig && a.pts.length === b.pts.length && a.pts.every((z, i) => Math.abs(z - b.pts[i]) < 0.01);
+const exportOne = function (item) {
     try {
-        const region = raster.getSubRaster(rect);
-        region.remove();
-        const dataUrl = region.toDataURL();
-        return {dataUrl, rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height}};
+        if (item instanceof paper.Raster && item.canvas) {
+            let src = item.canvas;
+            const w = src.width, h = src.height;
+            if (!w || !h) return null;
+            const k = Math.min(1, Math.sqrt(160000 / (w * h)));
+            if (k < 1) {
+                const cv = document.createElement('canvas');
+                cv.width = Math.max(1, Math.round(w * k));
+                cv.height = Math.max(1, Math.round(h * k));
+                cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height);
+                src = cv;
+            }
+            const m = item.matrix;
+            return `<image x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" preserveAspectRatio="none" transform="matrix(${[m.a, m.b, m.c, m.d, m.tx, m.ty].join(' ')})" href="${src.toDataURL()}"/>`;
+        }
+        const node = (item instanceof paper.Shape ? item.toPath(false) : item).exportSVG({asString: true});
+        return typeof node === 'string' ? node : null;
     } catch (e) { return null; }
+};
+const rasterMap = function () {
+    const raster = getRaster();
+    if (!raster || !raster.width) return null;
+    const b = raster.bounds;
+    return {raster, b, sx: raster.width / b.width, sy: raster.height / b.height};
+};
+const cropTile = function (canvas, rect, map) {
+    const px = Math.max(0, Math.floor((rect.x - map.b.x) * map.sx));
+    const py = Math.max(0, Math.floor((rect.y - map.b.y) * map.sy));
+    const pw = Math.min(canvas.width, Math.ceil((rect.x + rect.width - map.b.x) * map.sx)) - px;
+    const ph = Math.min(canvas.height, Math.ceil((rect.y + rect.height - map.b.y) * map.sy)) - py;
+    if (pw < 1 || ph < 1) return null;
+    const cv = document.createElement('canvas');
+    cv.width = pw;
+    cv.height = ph;
+    cv.getContext('2d').drawImage(canvas, px, py, pw, ph, 0, 0, pw, ph);
+    return {d: cv.toDataURL(), x: map.b.x + (px / map.sx), y: map.b.y + (py / map.sy), w: pw / map.sx, h: ph / map.sy};
+};
+const sampleTiles = function (out) {
+    const g = _gesture;
+    const sources = guideSources().filter(item => item.data.collabTiles && item.canvas);
+    if (!sources.length) return;
+    const map = rasterMap();
+    if (!map) return;
+    const pad = ((g.getSize ? g.getSize() : 10) / 2) + 4;
+    const replace = g.tool === 'BIT_LINE';
+    const area = replace ? g.dirty : g.fresh;
+    if (!area) return;
+    g.fresh = null;
+    const tile = cropTile(sources[0].canvas, area.expand(pad * 2), map);
+    if (!tile) return;
+    if (replace) out.set = tile; else out.tiles = [tile];
 };
 const sendPreview = function () {
     if (!isCollabActive() || !_gesture) return;
-    const payload = _gesture.isVector ?
-        {svg: sampleVectorPreview()} :
-        sampleBitmapPreview(_gesture.getRaster);
-    if (!payload || (!payload.svg && !payload.dataUrl)) return;
-    send(Object.assign({op: 'preview'}, payload));
+    const g = _gesture;
+    const out = {g: g.id, tool: g.tool};
+    let changed = false;
+    const items = [];
+    const ks = [];
+    let bytes = 0;
+    for (const item of hotItems()) {
+        const k = item.id;
+        const now = refPoints(item);
+        const sent = g.sent.get(k);
+        const fresh = !g.startIds.has(k) || item.guide;
+        const geo = item.guide ? null : geoOf(item);
+        if (sent && sent.gk && geo && geo.key === sent.gk) {
+            ks.push(k);
+            const pj = geo.p.join();
+            if (pj !== sent.pj) { sent.pj = pj; items.push({k, p: geo.p}); changed = true; }
+            continue;
+        }
+        if (sent && !fresh && !sent.gk && sent.ref.sig === now.sig) {
+            const m = solveAffine(sent.ref.pts, now.pts);
+            if (m) {
+                ks.push(k);
+                if (m.join() !== sent.m) { sent.m = m.join(); items.push({k, m}); changed = true; }
+                continue;
+            }
+        }
+        if (!sent && !fresh) {
+            const start = g.refs.get(k);
+            if (start && samePts(start, now)) continue;
+        }
+        if (sent && fresh && sent.ref.sig === now.sig && samePts(sent.ref, now) && !item.guide) { ks.push(k); continue; }
+        const svg = exportOne(item);
+        if (!svg) continue;
+        bytes += svg.length;
+        if (bytes > PREVIEW_MAX_BYTES) break;
+        ks.push(k);
+        if (sent && sent.svg === svg) continue;
+        g.sent.set(k, {ref: now, svg, m: '1,0,0,1,0,0', gk: geo ? geo.key : null, pj: geo ? geo.p.join() : null});
+        items.push(geo ? {k, svg, gk: geo.key, p: geo.p} : {k, svg});
+        changed = true;
+    }
+    const live = _liveSource && g.isVector ? _liveSource() : null;
+    if (live && bytes + live.length < PREVIEW_MAX_BYTES) {
+        ks.push(-1);
+        const sent = g.sent.get(-1);
+        if (!sent || sent.svg !== live) { g.sent.set(-1, {svg: live}); items.push({k: -1, svg: live}); changed = true; }
+    }
+    if (ks.join() !== g.lastKs) { g.lastKs = ks.join(); changed = true; }
+    out.ks = ks;
+    if (items.length) out.items = items;
+    if (!g.isVector) sampleTiles(out);
+    if (out.tiles || out.set) changed = true;
+    if (TRAIL_TOOLS.has(g.tool) && !live && g.trail.length > g.trailSent && !out.tiles && !out.set && !items.length) {
+        const map = g.isVector ? null : rasterMap();
+        const size = g.getSize ? g.getSize() : 10;
+        out.trail = {from: g.trailSent / 2, p: g.trail.slice(g.trailSent), w: map ? size / map.sx : size};
+        g.trailSent = g.trail.length;
+        changed = true;
+    }
+    const nowMs = Date.now();
+    if (!changed && (!g.sentAny || nowMs - g.lastSent < PREVIEW_KEEPALIVE_MS)) return;
+    g.sentAny = true;
+    g.lastSent = nowMs;
+    send(Object.assign({op: 'preview'}, out));
 };
-const beginGesture = function ({isVector, getRaster}) {
+let _gestureSeq = 0;
+const STICKY_TOOLS = new Set(['POLYGON', 'BIT_POLYGON']);
+const isStickyTool = () => STICKY_TOOLS.has(_localTool);
+const selectedRefs = function (layer) {
+    const refs = new Map();
+    if (!layer) return refs;
+    for (const selected of paper.project.selectedItems) {
+        let top = selected;
+        while (top.parent && top.parent !== layer) top = top.parent;
+        if (top.parent === layer && !refs.has(top.id)) refs.set(top.id, refPoints(top));
+        if (refs.size >= PREVIEW_MAX_ITEMS) break;
+    }
+    return refs;
+};
+const renewGesture = function () {
+    if (!_gesture) return;
+    const layer = getPaintingLayer();
+    _gesture.id = (++_gestureSeq % 1e6) + 1;
+    _gesture.sent = new Map();
+    _gesture.refs = selectedRefs(layer);
+    _gesture.startIds = new Set(layer ? layer.children.map(item => item.id) : []);
+    _gesture.lastKs = '';
+    _gesture.sentAny = false;
+    _gesture.trail = [];
+    _gesture.trailSent = 0;
+};
+const beginGesture = function ({isVector, getRaster: rasterOf, getSize, focusId}) {
     if (!isCollabActive()) return;
     stopGesture();
     const layer = getPaintingLayer();
-    _gesture = {isVector, getRaster, startIds: new Set(layer ? layer.children.map(item => item.id) : []), dirty: null};
+    const refs = selectedRefs(layer);
+    if (!isVector && !_bitmapBase && !paper.project.selectedItems.length) captureBitmapBase();
+    _gesture = {isVector, getRaster: rasterOf, getSize, tool: _localTool, id: (++_gestureSeq % 1e6) + 1,
+        startIds: new Set(layer ? layer.children.map(item => item.id) : []), refs, sent: new Map(),
+        focusId: focusId || null, sticky: STICKY_TOOLS.has(_localTool), dirty: null, fresh: null, trail: [], trailSent: 0, lastSent: 0, sentAny: false, lastKs: ''};
     _previewTimer = setInterval(sendPreview, PREVIEW_INTERVAL_MS);
 };
 const trackGesturePoint = function (point) {
-    if (!_gesture || _gesture.isVector || !point) return;
+    if (!_gesture || !point) return;
+    const g = _gesture;
+    if (TRAIL_TOOLS.has(g.tool) && g.trail.length < 8000) g.trail.push(Math.round(point.x * 10) / 10, Math.round(point.y * 10) / 10);
+    if (g.isVector) return;
     const at = new paper.Rectangle(point.x, point.y, 1, 1);
-    _gesture.dirty = _gesture.dirty ? _gesture.dirty.unite(at) : at;
+    g.dirty = g.dirty ? g.dirty.unite(at) : at;
+    if (!g.fresh && g.last) g.fresh = new paper.Rectangle(g.last.x, g.last.y, 1, 1);
+    g.fresh = g.fresh ? g.fresh.unite(at) : at;
+    g.last = point;
 };
+const hasGesture = () => !!_gesture;
 const endGesture = function () {
-    const wasActive = !!_gesture;
+    const g = _gesture;
     stopGesture();
-    if (wasActive && isCollabActive()) send({op: 'preview-end'});
+    if (g && g.sentAny && isCollabActive()) send({op: 'preview-end'});
 };
+let _bitmapBase = null;
+let _patchSeq = 0;
+const _patchTag = Math.random().toString(36).slice(2, 8);
+let _patchState = {pid: null, clean: true};
+const _patches = new Map();
+const captureBitmapBase = function () {
+    const raster = getRaster();
+    if (!raster || !raster.loaded || !raster.canvas) return;
+    try { _bitmapBase = raster.getContext(false).getImageData(0, 0, raster.canvas.width, raster.canvas.height); } catch (e) { _bitmapBase = null; }
+};
+const noteBitmapCommit = function (plastered) {
+    if (!isCollabActive() || !plastered || !plastered.canvas) { _bitmapBase = null; return; }
+    let data;
+    try { data = plastered.getContext(false).getImageData(0, 0, plastered.canvas.width, plastered.canvas.height); } catch (e) { _bitmapBase = null; _patchState.clean = false; return; }
+    const base = _bitmapBase;
+    _bitmapBase = data;
+    if (_applyingRemote) return;
+    if (!base || base.width !== data.width || base.height !== data.height) { _patchState.clean = false; return; }
+    const W = data.width;
+    const A = new Uint32Array(base.data.buffer);
+    const B = new Uint32Array(data.data.buffer);
+    let x0 = W, y0 = data.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < data.height; y++) {
+        const row = y * W;
+        let first = -1, last = -1;
+        for (let x = 0; x < W; x++) if (A[row + x] !== B[row + x]) { if (first < 0) first = x; last = x; }
+        if (first < 0) continue;
+        if (first < x0) x0 = first;
+        if (last > x1) x1 = last;
+        if (y < y0) y0 = y;
+        y1 = y;
+    }
+    if (x1 < 0) return;
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+    const img = new ImageData(w, h);
+    const mask = new ImageData(w, h);
+    const I = new Uint32Array(img.data.buffer);
+    const K = new Uint32Array(mask.data.buffer);
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const i = ((y + y0) * W) + x + x0;
+            if (A[i] === B[i]) continue;
+            I[(y * w) + x] = B[i];
+            K[(y * w) + x] = 0xff000000;
+        }
+    }
+    const url = d => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').putImageData(d, 0, 0); return cv.toDataURL(); };
+    const pid = `${_patchTag}${++_patchSeq}`;
+    _patchState.pid = pid;
+    send({op: 'bpatch', pid, x: x0, y: y0, w, h, d: url(img), k: url(mask)});
+    renewGesture();
+};
+const takePatchState = function () {
+    const st = _patchState;
+    _patchState = {pid: null, clean: true};
+    return st.clean ? st.pid : null;
+};
+const loadImage = src => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+});
+const receivePatch = function (packet, fromId) {
+    const costume = _costume;
+    const job = Promise.all([loadImage(packet.d), loadImage(packet.k)]).then(([img, mask]) => {
+        if (!img || !mask || _costume !== costume || !_host || !_host.isBitmap || !_host.isBitmap()) return false;
+        const op = {op: 'bpatch', x: packet.x, y: packet.y, img, mask};
+        const raster = getRaster();
+        if (!raster || !raster.loaded || op.x + img.width > raster.canvas.width || op.y + img.height > raster.canvas.height) return false;
+        applyOps([op], {log: true});
+        clearPeerPreview(fromId);
+        return true;
+    });
+    _patches.set(packet.pid, job);
+    if (_patches.size > 64) _patches.delete(_patches.keys().next().value);
+};
+const applyPatch = function (op) {
+    const raster = getRaster();
+    if (!raster || !raster.loaded || !raster.canvas) return false;
+    if (op.x + op.img.width > raster.canvas.width || op.y + op.img.height > raster.canvas.height) return false;
+    const ctx = raster.getContext(true);
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.drawImage(op.mask, op.x, op.y);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(op.img, op.x, op.y);
+    ctx.restore();
+    return true;
+};
+const whenPatch = pid => _patches.get(pid) || null;
 export {
     PREVIEW_INTERVAL_MS,
     PREVIEW_TIMEOUT_MS,
@@ -491,6 +869,8 @@ export {
     setCollabCostume,
     resetCollab,
     commitLocalChanges,
+    liveCommit,
+    setLivePreviewSource,
     receivePacket,
     remoteSeq,
     replayRemoteOpsSince,
@@ -506,5 +886,11 @@ export {
     beginGesture,
     isTrackingGesture,
     trackGesturePoint,
-    endGesture
+    endGesture,
+    hasGesture,
+    isStickyTool,
+    keepPeers,
+    noteBitmapCommit,
+    takePatchState,
+    whenPatch
 };
