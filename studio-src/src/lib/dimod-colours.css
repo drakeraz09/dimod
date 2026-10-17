@@ -1,0 +1,150 @@
+body[dimod-colour] {
+    --g-accent-hi: oklch(from var(--dimod-motion-primary, #6c5ce7) max(l, 0.72) c h);
+    --g-bar-hover: rgba(0, 0, 0, 0.2);
+    --g-shadow: rgba(0, 0, 0, 0.45);
+    --g-stage-grid: rgba(255, 255, 255, 0.025);
+    --g-k-grid: rgba(255, 255, 255, 0.04);
+    --g-k-grid-2: rgba(255, 255, 255, 0.09);
+    --g-icon-filter: brightness(0) invert(0.88);
+    --g-overlay: rgba(10, 12, 16, 0.75);
+    --g-black-transparent: rgba(0, 0, 0, 0.4);
+}
+body[dimod-colour="light"] {
+    --g-accent-hi: oklch(from var(--dimod-motion-primary, #6c5ce7) min(l, 0.5) c h);
+    --g-bar-hover: rgba(0, 0, 0, 0.12);
+    --g-shadow: rgba(30, 35, 50, 0.16);
+    --g-stage-grid: rgba(0, 0, 0, 0.04);
+    --g-k-grid: rgba(0, 0, 0, 0.05);
+    --g-k-grid-2: rgba(0, 0, 0, 0.1);
+    --g-icon-filter: brightness(0) invert(0.3);
+    --g-black-transparent: rgba(0, 0, 0, 0.12);
+}
+body[dimod-colour="light"] {
+    --g-base: #f4f5f8;
+    --g-dark1: #eaecf1;
+    --g-dark2: #e2e5eb;
+    --g-dark3: #d4d8e0;
+    --g-raised: #fdfdfe;
+    --g-hover: #eceef4;
+    --g-line: #d3d7df;
+    --g-text: #2b303b;
+    --g-dim: #6d7483;
+    --g-scroll: #c4c9d3;
+    --g-scroll-hover: #aeb4c1;
+    --g-grid: #dde1e8;
+    --g-canvas-bg: #ffffff;
+    --g-canvas-tile: #d9e3f2;
+    --g-canvas-bounds: #eaecf1;
+    --g-canvas-outline: var(--dimod-motion-primary, #6c5ce7);
+    --g-overlay: rgba(40, 45, 60, 0.4);
+}
+body[dimod-colour="dark"] {
+    --g-base: #242933;
+    --g-dark1: #1d2128;
+    --g-dark2: #1a1d24;
+    --g-dark3: #14171c;
+    --g-raised: #2f3643;
+    --g-hover: #363e4d;
+    --g-line: #14171c;
+    --g-text: #e0e1e4;
+    --g-dim: #8e939c;
+    --g-scroll: #3d4554;
+    --g-scroll-hover: #4d576a;
+    --g-grid: #2a303a;
+    --g-canvas-bg: #2a303b;
+    --g-canvas-tile: #2f3642;
+    --g-canvas-bounds: #1d2128;
+    --g-canvas-outline: #478cbf;
+}
+body[dimod-colour="midnight"] {
+    --g-base: #0c0d11;
+    --g-dark1: #060709;
+    --g-dark2: #000;
+    --g-dark3: #000;
+    --g-raised: #16181e;
+    --g-hover: #1e2129;
+    --g-line: #1c1f27;
+    --g-text: #e8eaf0;
+    --g-dim: #7c818f;
+    --g-shadow: rgba(0, 0, 0, 0.7);
+    --g-scroll: #262a33;
+    --g-scroll-hover: #343945;
+    --g-grid: #12141a;
+    --g-stage-grid: rgba(255, 255, 255, 0.03);
+    --g-canvas-bg: #101217;
+    --g-canvas-tile: #16181e;
+    --g-canvas-bounds: #060709;
+    --g-canvas-outline: var(--dimod-motion-primary, #6c5ce7);
+    --g-overlay: rgba(0, 0, 0, 0.8);
+}
+body[dimod-colour="contrast"] {
+    --g-base: #000;
+    --g-dark1: #000;
+    --g-dark2: #000;
+    --g-dark3: #000;
+    --g-raised: #121212;
+    --g-hover: #262626;
+    --g-line: #fff;
+    --g-text: #fff;
+    --g-dim: #e6e6e6;
+    --g-accent-hi: oklch(from var(--dimod-motion-primary, #6c5ce7) max(l, 0.8) c h);
+    --g-shadow: rgba(0, 0, 0, 0.9);
+    --g-scroll: #bdbdbd;
+    --g-scroll-hover: #fff;
+    --g-grid: #1a1a1a;
+    --g-stage-grid: rgba(255, 255, 255, 0.06);
+    --g-icon-filter: brightness(0) invert(1);
+    --g-canvas-bg: #0a0a0a;
+    --g-canvas-tile: #1c1c1c;
+    --g-canvas-bounds: #000;
+    --g-canvas-outline: #fff;
+    --g-overlay: rgba(0, 0, 0, 0.88);
+    --g-black-transparent: rgba(255, 255, 255, 0.6);
+}
+body[dimod-colour="midnight"]:not([editor-theme]) {
+    --ui-primary: #000;
+    --ui-secondary: #0b0c0f;
+    --ui-tertiary: #17181d;
+    --ui-modal-overlay: rgba(0, 0, 0, 0.8);
+    --ui-black-transparent: rgba(255, 255, 255, 0.12);
+    background: #000;
+}
+body[dimod-colour="contrast"]:not([editor-theme]) {
+    --ui-primary: #000;
+    --ui-secondary: #000;
+    --ui-tertiary: #1a1a1a;
+    --ui-modal-overlay: rgba(0, 0, 0, 0.88);
+    --ui-black-transparent: rgba(255, 255, 255, 0.65);
+    --text-primary: #fff;
+    background: #000;
+}
+body[dimod-colour="midnight"]:not([editor-theme]) .blocklySvg { background-color: #050608 !important; }
+body[dimod-colour="midnight"]:not([editor-theme]) .blocklyFlyoutBackground,
+body[dimod-colour="midnight"]:not([editor-theme]) .blocklyFlyoutCheckbox { fill: #000; }
+body[dimod-colour="midnight"]:not([editor-theme]) .blocklyToolboxDiv,
+body[dimod-colour="midnight"]:not([editor-theme]) .scratchCategoryMenu { background: #000 !important; }
+body[dimod-colour="midnight"]:not([editor-theme]) [id^="blocklyGridPattern"] > line { stroke: #1b1d24; }
+body[dimod-colour="contrast"]:not([editor-theme]) .blocklySvg { background-color: #000 !important; }
+body[dimod-colour="contrast"]:not([editor-theme]) .blocklyFlyoutBackground,
+body[dimod-colour="contrast"]:not([editor-theme]) .blocklyFlyoutCheckbox { fill: #000; }
+body[dimod-colour="contrast"]:not([editor-theme]) .blocklyToolboxDiv,
+body[dimod-colour="contrast"]:not([editor-theme]) .scratchCategoryMenu { background: #000 !important; }
+body[dimod-colour="contrast"]:not([editor-theme]) [id^="blocklyGridPattern"] > line { stroke: #333; }
+body[dimod-colour="contrast"] :focus-visible {
+    outline: 2px solid var(--g-accent-hi) !important;
+    outline-offset: 1px;
+}
+body[dimod-colour="contrast"][editor-theme] [class*="sprite-selector-item_is-selected_"],
+body[dimod-colour="contrast"][editor-theme] [class*="stage-selector_is-selected_"] {
+    border-width: 2px;
+}
+:root:has(body[dimod-colour="light"][editor-theme]) { background: #eaecf1; color-scheme: light; }
+:root:has(body[dimod-colour="dark"][editor-theme]) { background: #1d2128; }
+:root:has(body[dimod-colour="midnight"]) { background: #000; }
+:root:has(body[dimod-colour="contrast"]) { background: #000; }
+body[editor-theme] .k5-checker:not(.k5-force-light):not(.k5-force-dark),
+body[dimod-colour="midnight"] .k5-checker:not(.k5-force-light):not(.k5-force-dark),
+body[dimod-colour="contrast"] .k5-checker:not(.k5-force-light):not(.k5-force-dark) {
+    --k-tile: var(--g-canvas-tile);
+    background-color: var(--g-canvas-bg);
+}

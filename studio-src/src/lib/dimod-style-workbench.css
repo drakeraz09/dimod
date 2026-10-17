@@ -1,0 +1,245 @@
+body[editor-theme="godot"][dimod-style="workbench"] {
+    --g-radius: 4px;
+    --g-bar: var(--g-dark2);
+    --g-on-bar: var(--g-text);
+    --g-bar-filter: var(--g-icon-filter);
+    --g-bar-hover: var(--g-hover);
+    --w-gutter: var(--g-dark3);
+    --w-area: 6px;
+    --w-bevel: linear-gradient(color-mix(in srgb, var(--g-raised) 88%, #fff 12%), var(--g-raised));
+    --w-bevel-hover: linear-gradient(color-mix(in srgb, var(--g-hover) 85%, #fff 15%), var(--g-hover));
+    --w-sunken: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+    background: var(--w-gutter);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] {
+    height: 2.125rem;
+    border-bottom: none;
+    box-shadow: inset 0 -2px 0 var(--g-accent);
+    --dimod-on-accent: var(--g-text);
+    --dimod-on-accent-filter: var(--g-icon-filter);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] [class*="menu_menu_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] [class*="theme-picker_flyout_"] {
+    --dimod-on-accent: var(--g-on-accent);
+    --dimod-on-accent-filter: none;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar-item_"] {
+    font-size: 0.6875rem;
+    padding: 0 0.5rem;
+    margin: 0 1px;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] [class*="button_outlined-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] [class*="share-button"] {
+    background: var(--g-accent);
+    border: 1px solid var(--g-dark3);
+    color: var(--g-on-accent);
+    height: 1.625rem;
+    font-size: 0.6875rem;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] input[type="text"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] [class*="project-title-input"] {
+    height: 1.5rem;
+    font-size: 0.6875rem;
+    background: var(--g-dark3);
+    border-color: var(--g-line);
+    box-shadow: var(--w-sunken);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_body-wrapper_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_page-wrapper_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="dimod-panels_panels_"] {
+    background: var(--w-gutter);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="dimod-panels_divider_"] { background: var(--w-gutter); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_editor-wrapper_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_panel_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-wrapper_stage-wrapper_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="target-pane_target-pane_"] {
+    background: var(--g-base);
+    border: none;
+    border-radius: var(--w-area);
+    overflow: hidden;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_body-wrapper_"] { padding: 4px; box-sizing: border-box; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_stage-and-target-wrapper_"] { background: var(--w-gutter); gap: 4px; }
+body[editor-theme="godot"][dimod-style="workbench"] .blocklyToolboxDiv,
+body[editor-theme="godot"][dimod-style="workbench"] .scratchCategoryMenu { background: var(--g-base) !important; border-right: 1px solid var(--w-gutter); }
+body[editor-theme="godot"][dimod-style="workbench"] .blocklyFlyoutBackground { fill: var(--g-base); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="react-tabs_react-tabs__tab-list_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab-list_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_header_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-header_stage-header-wrapper_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-header_stage-menu-wrapper_"] {
+    background: var(--g-raised);
+    border-bottom: 1px solid var(--w-gutter);
+    min-height: 1.875rem;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="react-tabs_react-tabs__tab-list_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab-list_"] {
+    height: 1.875rem;
+    padding: 0 4px;
+    gap: 6px;
+    align-items: center;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab_"] {
+    height: 1.375rem;
+    padding: 0 0.625rem;
+    border: 1px solid transparent;
+    border-radius: var(--g-radius);
+    font-size: 0.6875rem;
+    color: var(--g-dim);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab_"] img { width: 1rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab_"]:hover { background: var(--w-bevel-hover); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab_"] { background: var(--w-bevel); border-color: var(--w-gutter); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab_"][class*="is-selected"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="gui_tab_"][aria-selected="true"] {
+    background: color-mix(in srgb, var(--g-accent) 30%, var(--g-base));
+    border-color: color-mix(in srgb, var(--g-accent) 60%, var(--w-gutter));
+    color: var(--g-text);
+    box-shadow: none;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_title_"] {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.625rem;
+    color: var(--g-dim);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="button_outlined-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-header_stage-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sound-editor_button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sound-editor_round-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_button-group-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="tool-select-base_mod-tool-select_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_icon-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_header-button_"] {
+    background: var(--w-bevel);
+    border: 1px solid var(--w-gutter);
+    border-radius: var(--g-radius);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="button_outlined-button_"]:hover,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-header_stage-button_"]:hover,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sound-editor_button_"]:hover,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_button-group-button_"]:hover,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="tool-select-base_mod-tool-select_"]:hover {
+    background: var(--w-bevel-hover);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="tool-select-base_is-selected_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-info_is-active_"] {
+    background: var(--g-accent);
+    border-color: var(--g-accent);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="tool-select-base_is-selected_"] img,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-info_is-active_"] img { filter: var(--dimod-on-accent-filter, brightness(0) invert(1)); }
+body[editor-theme="godot"][dimod-style="workbench"] input[type="text"],
+body[editor-theme="godot"][dimod-style="workbench"] input[type="number"],
+body[editor-theme="godot"][dimod-style="workbench"] input:not([type]),
+body[editor-theme="godot"][dimod-style="workbench"] select,
+body[editor-theme="godot"][dimod-style="workbench"] textarea,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="input_input-form_"] {
+    background: var(--g-dark2);
+    border: 1px solid var(--w-gutter);
+    border-radius: var(--g-radius);
+    box-shadow: var(--w-sunken);
+    font-size: 0.75rem;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="input_input-form_"] { height: 1.625rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-info_sprite-info_"] { padding: 0.375rem 0.5rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-info_row_"] { margin-bottom: 0.25rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="label_input-label"] { font-size: 0.6875rem; color: var(--g-dim); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-selector-item_sprite-selector-item_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-selector_stage-selector_"] {
+    background: var(--g-dark1);
+    border: 1px solid var(--w-gutter);
+    border-radius: var(--g-radius);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-selector-item_is-selected_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-selector_is-selected_"] {
+    background: color-mix(in srgb, var(--g-accent) 32%, var(--g-dark1));
+    border-color: var(--g-accent);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-selector-item_sprite-name_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-selector-item_sprite-details_"] { font-size: 0.625rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sprite-selector_sprite-wrapper_"] { width: 4.25rem; height: 4.25rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_row_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_sprite_"] { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_scene_"] {
+    background: var(--g-dark1);
+    border-color: var(--w-gutter);
+    border-radius: var(--g-radius);
+    margin-bottom: 2px;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="scenes-panel_current_"] { background: color-mix(in srgb, var(--g-accent) 30%, transparent); }
+body[editor-theme="godot"][dimod-style="workbench"] .blocklySvg { background-color: var(--g-dark2) !important; }
+body[editor-theme="godot"][dimod-style="workbench"] .scratchCategoryMenu { font-size: 0.625rem; }
+body[editor-theme="godot"][dimod-style="workbench"] .scratchCategoryMenuItem { padding: 0.25rem 0; }
+body[editor-theme="godot"][dimod-style="workbench"] .scratchCategoryItemBubble { width: 1rem !important; height: 1rem !important; }
+body[editor-theme="godot"][dimod-style="workbench"] .scratchCategoryMenuItem.categorySelected {
+    background: color-mix(in srgb, var(--g-accent) 28%, transparent);
+    box-shadow: none;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage_stage_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage_stage-wrapper_"] { border: none; border-radius: 0; box-shadow: none; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="stage-wrapper_stage-canvas-wrapper_"] { background-size: 24px 24px; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="modal_modal-content_"] { border-radius: var(--w-area); border-color: var(--w-gutter); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="modal_header_"] { height: 2.25rem; font-size: 0.8125rem; }
+body[editor-theme="godot"][dimod-style="workbench"] .react-contextmenu,
+body[editor-theme="godot"][dimod-style="workbench"] [class*="context-menu_context-menu_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu_menu_"] {
+    border-radius: var(--g-radius);
+    border-color: var(--w-gutter);
+    padding: 2px;
+    font-size: 0.75rem;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu_menu-item_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="context-menu_menu-item_"],
+body[editor-theme="godot"][dimod-style="workbench"] .react-contextmenu-item {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    border-radius: 3px;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="action-menu_main-button_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="selector_select-button_"] {
+    background: var(--w-bevel);
+    border-color: var(--w-gutter);
+    border-radius: var(--w-area);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="action-menu_more-buttons-outer_"] { border-color: var(--w-gutter); border-radius: var(--w-area) var(--w-area) 0 0; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="theme-picker_pill_"] { border-radius: var(--w-area); border-color: var(--w-gutter); }
+body[editor-theme="godot"][dimod-style="workbench"] ::-webkit-scrollbar { width: 7px; height: 7px; }
+body[editor-theme="godot"][dimod-style="workbench"] ::-webkit-scrollbar-thumb { border-width: 1px; border-radius: 4px; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_editor-container_"] { padding: 0.375rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_row_"] { margin-bottom: 0.25rem; }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_mode-selector_"] {
+    background: var(--g-dark2);
+    border-radius: var(--w-area);
+    padding: 2px;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="sound-editor_editor-container_"] { padding: 0.5rem; }
+body[editor-theme="godot"][dimod-style="workbench"] .ks5 {
+    --k-radius: 4px;
+    --k-radius-sm: 3px;
+    --k-bar: var(--g-dark2);
+    --k-on-accent: var(--g-on-accent);
+}
+body[editor-theme="godot"][dimod-style="workbench"] .ks5 .k5-menubar {
+    color: var(--g-text);
+    height: 2rem;
+    box-shadow: inset 0 -2px 0 var(--g-accent);
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="dimod-assets-tab_head_"] { background: var(--g-dark2); border-bottom: 1px solid var(--w-gutter); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar_"] [class*="input_input-form_"] {
+    background: var(--g-dark3);
+    border-color: var(--g-line);
+    box-sizing: border-box;
+    height: 1.5rem !important;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-self: center;
+}
+body[editor-theme="godot"][dimod-style="workbench"] [class*="menu-bar_menu-bar-item_"][class*="menu-bar_growable_"] { align-items: center; height: calc(100% - 2px); }
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_editor-container-top_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_mode-selector_"],
+body[editor-theme="godot"][dimod-style="workbench"] [class*="paint-editor_bottom-row_"] { zoom: 0.8; }
+body[editor-theme="godot"][dimod-style="workbench"] [data-dimod-asset-kind="costume"] [class*="selector_list-area_"] { zoom: 0.82; }

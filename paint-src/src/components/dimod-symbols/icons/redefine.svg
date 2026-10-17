@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 20 20">
+    <title>replace with selection</title>
+    <g fill="none" fill-rule="evenodd">
+        <path d="M4 7.5A6 6 0 0 1 16 8" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+        <path d="M16 12.5A6 6 0 0 1 4 12" stroke="#575E75" stroke-width="2" stroke-linecap="round"/>
+        <path d="M16 4.5V8h-3.5" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 15.5V12h3.5" stroke="#575E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+</svg>

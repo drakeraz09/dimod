@@ -1,0 +1,392 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.editor-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: calc(3 * $grid-unit);
+    min-width: 0;
+}
+[theme="dark"] .editor-container {
+    color-scheme: dark;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: calc(2 * $grid-unit);
+    align-content: center;
+    min-width: 0;
+}
+
+.row > * {
+    flex-shrink: 0;
+}
+
+.editor-container-top {
+    border-bottom: 1px dashed $ui-pane-border;
+    padding-bottom: calc(2 * $grid-unit);
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.top-align-row {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-top: calc(5 * $grid-unit);
+    min-width: 0;
+}
+
+.row + .row {
+    margin-top: calc(2 * $grid-unit);
+}
+
+[dir="ltr"] .mod-dashed-border {
+    border-right: 1px dashed $ui-pane-border;
+    padding-right: calc(2 * $grid-unit);
+}
+
+[dir="rtl"] .mod-dashed-border {
+    border-left: 1px dashed $ui-pane-border;
+    padding-left: calc(2 * $grid-unit);
+}
+
+[dir="ltr"] .mod-dashed-border:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+[dir="rtl"] .mod-dashed-border:last-child {
+    border-left: none;
+    padding-left: 0;
+}
+
+.mod-labeled-icon-height {
+    height: 2.85rem; /* for the second row so the dashed borders are equal in size */
+}
+
+$border-radius: .5rem;
+
+.button-group-button {
+    display: inline-block;
+    border: 1px solid $ui-pane-border;
+    border-radius: 0;
+    padding: .35rem;
+}
+
+[dir="ltr"] .button-group-button {
+    border-left: none;
+}
+
+[dir="rtl"] .button-group-button {
+    border-right: none;
+}
+
+[dir="ltr"] .button-group-button:last-of-type {
+    border-top-right-radius: $border-radius;
+    border-bottom-right-radius: $border-radius;
+}
+
+[dir="ltr"] .button-group-button:first-of-type {
+    border-left: 1px solid $ui-pane-border;
+    border-top-left-radius: $border-radius;
+    border-bottom-left-radius: $border-radius;
+}
+
+[dir="rtl"] .button-group-button:last-of-type {
+    border-top-left-radius: $border-radius;
+    border-bottom-left-radius: $border-radius;
+}
+
+[dir="rtl"] .button-group-button:first-of-type {
+    border-right: 1px solid $ui-pane-border;
+    border-top-right-radius: $border-radius;
+    border-bottom-right-radius: $border-radius;
+}
+
+[dir="ltr"] .button-group-button.mod-start-border {
+    border-left: 1px solid $ui-pane-border;
+}
+
+[dir="rtl"] .button-group-button.mod-start-border {
+    border-right: 1px solid $ui-pane-border;
+}
+
+[dir="ltr"].button-group-button.mod-no-end-border {
+    border-right: none;
+}
+
+[dir="rtl"].button-group-button.mod-no-end-border {
+    border-left: none;
+}
+
+.button-group-button-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    vertical-align: middle;
+}
+[theme="dark"] .button-group-button-icon {
+    filter: var(--dimod-dark-icon-filter, brightness(1.7));
+}
+
+.mod-mode-tools {
+    margin-left: calc(2 * $grid-unit);
+}
+
+[dir="ltr"] .mod-margin-after {
+    margin-right: calc(2 * $grid-unit);
+}
+
+[dir="rtl"] .mod-margin-after {
+    margin-left: calc(2 * $grid-unit);
+}
+
+.controls-container {
+    width: 100%;
+    display: flex;
+    flex-flow: column;
+    flex-grow: 1;
+    margin-left: calc(2 * $grid-unit);
+    margin-right: calc(2 * $grid-unit);
+}
+
+.canvas-container {
+    width: 100%;
+    flex-grow: 1;
+    min-width: 160px;
+    border: 1px solid #e8edf1;
+    border-radius: .5rem;
+    position: relative;
+    overflow: visible;
+}
+[theme="dark"] .canvas-container {
+    border-color: $form-border;
+}
+
+.tool-column {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.mode-selector {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.mode-selector-two {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-items: start;
+}
+
+.zoom-controls {
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+.color-picker-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.canvas-controls {
+    display: flex;
+    height: 36px;
+    margin-top: $grid-unit;
+    justify-content: space-between;
+}
+
+.bitmap-button {
+    display: flex;
+    border-radius: 5px;
+    background-color: $motion-primary;
+    padding: calc(2 * $grid-unit);
+    line-height: 1.5rem;
+    font-size: calc(3 * $grid-unit);
+    font-weight: bold;
+    color: var(--dimod-on-accent, white);
+    justify-content: center;
+}
+
+.bitmap-button-compact {
+    box-sizing: border-box;
+    height: calc(1.95rem + 2px);
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.bitmap-button-icon {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+
+[dir="ltr"] .bitmap-button-icon {
+    margin-right: calc(2 * $grid-unit);
+}
+
+[dir="rtl"] .bitmap-button-icon {
+    margin-left: calc(2 * $grid-unit);
+}
+
+@media only screen and (max-width: $full-size-paint) {
+    .editor-container {
+        padding: calc(3 * $grid-unit) $grid-unit;
+    }
+
+.tool-column {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+    .controls-container {
+        margin-right: $grid-unit;
+        margin-left: $grid-unit;
+    }
+}
+
+.text-area {
+    color: black;
+    background: transparent;
+    border: none;
+    display: none;
+    margin: 0px;
+    opacity: .8;
+    outline: none;
+    overflow: hidden;
+    padding: 0px;
+    position: absolute;
+    resize: none;
+    -webkit-text-fill-color: transparent;
+    text-fill-color: transparent;
+}
+
+.button-text {
+    width: 100%; /* Fixes button text wrapping in Edge */
+}
+
+
+.top-bar {
+    display: flex;
+    flex-direction: column;
+    gap: $grid-unit;
+    padding-bottom: 0;
+}
+
+.top-row {
+    column-gap: calc(2 * $grid-unit);
+    row-gap: $grid-unit;
+}
+
+[dir="ltr"] .top-section {
+    border-left: 1px dashed $ui-pane-border;
+    padding-left: calc(2 * $grid-unit);
+}
+
+[dir="rtl"] .top-section {
+    border-right: 1px dashed $ui-pane-border;
+    padding-right: calc(2 * $grid-unit);
+}
+
+.top-row > .top-section {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.top-bar + .top-align-row {
+    padding-top: calc(2 * $grid-unit);
+}
+
+.context-row {
+    position: relative;
+    min-width: 0;
+}
+
+.bottom-row {
+    flex-shrink: 0;
+}
+
+.bottom-row .canvas-controls {
+    margin-right: calc(2 * $grid-unit);
+    height: auto;
+    min-height: 36px;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: $grid-unit;
+    min-width: 0;
+}
+
+.bottom-row .zoom-controls {
+    flex-wrap: wrap-reverse;
+    justify-content: flex-start;
+    row-gap: $grid-unit;
+    margin-left: auto;
+}
+
+.extra-view-controls {
+    display: flex;
+    align-items: center;
+    margin-left: calc(2 * $grid-unit);
+}
+
+.bottom-row .canvas-controls,
+.bottom-row .zoom-controls,
+.bottom-row .zoom-controls > * {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+.bottom-row .canvas-controls {
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.bottom-row .zoom-controls {
+    flex-shrink: 1;
+    min-width: 0;
+}
+.bottom-row .button-group-button,
+.bottom-row .button-group-button:first-of-type,
+.bottom-row .button-group-button:last-of-type {
+    box-sizing: border-box;
+    height: calc(1.95rem + 2px);
+    min-width: calc(1.95rem + 2px);
+    padding: 0 .3rem;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.bottom-row .button-group-button:hover {
+    background: $motion-light-transparent;
+}
+.bottom-row .button-group-button-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+@media only screen and (max-width: 1600px) {
+    .bottom-row .button-text {
+        display: none;
+    }
+    [dir] .bottom-row .bitmap-button-icon {
+        margin: 0;
+    }
+}

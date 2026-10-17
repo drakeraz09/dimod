@@ -1,0 +1,27 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.search {
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    padding: calc(1 * $grid-unit) calc(2 * $grid-unit);
+    font-size: .8125rem;
+    color: $text-primary;
+}
+
+.search:focus {
+    outline: none;
+    border-color: $motion-primary;
+}
+
+.grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: calc(2 * $grid-unit);
+}
+
+[theme="dark"] .search {
+    background: rgb(46, 46, 46);
+    color: $text-primary;
+}

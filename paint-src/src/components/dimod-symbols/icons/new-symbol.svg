@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0.35 0.6 20 20">
+    <title>new symbol</title>
+    <g fill="none" fill-rule="evenodd">
+        <rect x="2.5" y="4.5" width="9" height="9" rx="1.5" stroke="#575E75" stroke-width="1.5" stroke-dasharray="2.5 2"/>
+        <path d="M14.5 9.5v7M11 13h7" stroke="#6c5ce7" stroke-width="2" stroke-linecap="round"/>
+    </g>
+</svg>

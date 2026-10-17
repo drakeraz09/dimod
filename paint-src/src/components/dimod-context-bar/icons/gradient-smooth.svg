@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 20 20"><title>smooth</title><defs><linearGradient id="ds" x1="0" x2="1"><stop offset="0" stop-color="#6c5ce7"/><stop offset="1" stop-color="#575E75" stop-opacity=".15"/></linearGradient></defs><rect x="3" y="5" width="14" height="10" rx="2" fill="url(#ds)"/></svg>

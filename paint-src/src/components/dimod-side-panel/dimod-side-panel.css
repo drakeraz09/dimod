@@ -1,0 +1,541 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.panel-slot {
+    position: relative;
+    flex-shrink: 0;
+    width: 15rem;
+    min-height: 0;
+    margin-left: calc(2 * $grid-unit);
+    margin-bottom: calc(36px + $grid-unit);
+}
+
+.collapsed-slot {
+    position: relative;
+    flex-shrink: 0;
+    width: 1.75rem;
+    min-height: 0;
+    margin-left: calc(2 * $grid-unit);
+    margin-bottom: calc(36px + $grid-unit);
+}
+
+.collapsed-bar {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem 0;
+    border: 1px solid $ui-pane-border;
+    border-radius: .375rem;
+    background: transparent;
+    color: $text-primary;
+    cursor: pointer;
+    opacity: .7;
+    transition: opacity .12s, background-color .12s;
+}
+
+.collapsed-bar:hover {
+    opacity: 1;
+    background: var(--paint-motion-transparent, rgba(0, 0, 0, 0.04));
+}
+
+.collapsed-chevron {
+    font-size: 1.1rem;
+    line-height: 1;
+    font-weight: bold;
+}
+
+.collapsed-label {
+    writing-mode: vertical-rl;
+    font-size: .75rem;
+    font-weight: bold;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+
+.panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: 1px solid $ui-pane-border;
+    border-radius: .375rem;
+    overflow: hidden;
+}
+
+.tabs {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid $ui-pane-border;
+    flex-shrink: 0;
+}
+
+.tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: .5rem 0;
+    font-size: .75rem;
+    font-weight: bold;
+    color: $text-primary;
+    opacity: .6;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+    opacity: .9;
+}
+
+.tab-active {
+    opacity: 1;
+    color: $motion-primary;
+    border-bottom-color: $motion-primary;
+}
+
+.close {
+    border: none;
+    background: transparent;
+    width: 2rem;
+    font-size: 1rem;
+    color: $text-primary;
+    opacity: .6;
+    cursor: pointer;
+}
+
+.close:hover {
+    opacity: 1;
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.layers {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: $grid-unit 0;
+    position: relative;
+}
+
+.empty {
+    padding: 1rem;
+    font-size: .75rem;
+    line-height: 1.4;
+    color: $text-primary;
+    opacity: .65;
+}
+
+.layer-row {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    height: 1.75rem;
+    padding-right: .25rem;
+    font-size: .75rem;
+    color: $text-primary;
+    cursor: pointer;
+    user-select: none;
+    border-top: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+}
+
+.layer-row:hover {
+    background: $motion-light-transparent;
+}
+
+.layer-selected,
+.layer-selected:hover {
+    background: $motion-transparent;
+}
+
+.layer-hidden .layer-name,
+.layer-hidden .layer-icon,
+.layer-hidden .layer-swatch {
+    opacity: .4;
+}
+
+.drop-above {
+    border-top-color: $motion-primary;
+}
+
+.drop-below {
+    border-bottom-color: $motion-primary;
+}
+
+.drop-inside {
+    box-shadow: inset 0 0 0 2px $motion-primary;
+}
+
+.drop-end > .layer-row:last-child {
+    border-bottom-color: $motion-primary;
+}
+
+.layer-dragging {
+    opacity: .4;
+}
+
+.caret-button,
+.caret-spacer {
+    width: .9rem;
+    flex-shrink: 0;
+}
+
+.caret-button {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: .625rem;
+    color: $text-primary;
+    cursor: pointer;
+}
+
+.layer-icon {
+    flex-shrink: 0;
+    color: $text-primary;
+    opacity: .8;
+}
+
+.layer-swatch {
+    width: .75rem;
+    height: .75rem;
+    border-radius: .1875rem;
+    border: 1px solid rgba(0, 0, 0, .2);
+    flex-shrink: 0;
+}
+
+.layer-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.layer-name-default {
+    opacity: .75;
+}
+
+.rename-input {
+    flex: 1;
+    min-width: 0;
+    height: 1.35rem;
+    border: 1px solid $motion-primary;
+    border-radius: .5rem;
+    padding: 0 .3rem;
+    font-size: .75rem;
+    color: $text-primary;
+    background: transparent;
+    outline: none;
+}
+
+.row-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    flex-shrink: 0;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    color: $text-primary;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.layer-row:hover .row-toggle,
+.row-toggle-on {
+    opacity: .55;
+}
+
+.row-toggle:hover {
+    opacity: 1;
+    background: $motion-light-transparent;
+}
+
+.row-toggle-on {
+    color: $motion-primary;
+    opacity: 1;
+}
+
+.footer {
+    display: flex;
+    gap: $grid-unit;
+    padding: calc(1.5 * $grid-unit);
+    border-top: 1px solid $ui-pane-border;
+    flex-shrink: 0;
+}
+
+.footer-button {
+    flex: 1;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    transition: .2s;
+    padding: .4rem 0;
+    font-size: .6875rem;
+    color: $text-primary;
+    cursor: pointer;
+}
+
+.footer-button:not(:disabled):hover {
+    background: $motion-light-transparent;
+}
+
+.footer-button:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.cluster-settings {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    padding: $grid-unit calc(1.5 * $grid-unit);
+    border-top: 1px solid $ui-pane-border;
+    flex-shrink: 0;
+}
+
+.cluster-line {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .6875rem;
+    color: $text-primary;
+    white-space: nowrap;
+}
+
+.cluster-slider {
+    flex: 1;
+    min-width: 0;
+    accent-color: $motion-primary;
+}
+
+.cluster-value {
+    min-width: 2.2rem;
+    text-align: right;
+    opacity: .75;
+}
+
+.cluster-number {
+    width: 3rem;
+    margin-left: auto;
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    padding: .1rem .3rem;
+    font-size: .6875rem;
+    color: $text-primary;
+    background: transparent;
+}
+
+.history-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+    height: 1.75rem;
+    padding: 0 .6rem;
+    border: none;
+    background: transparent;
+    font-size: .75rem;
+    color: $text-primary;
+    text-align: left;
+    cursor: pointer;
+}
+
+.history-row:hover {
+    background: $motion-light-transparent;
+}
+
+.history-dot {
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    border: 1.5px solid $motion-primary;
+    flex-shrink: 0;
+}
+
+.history-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-time {
+    font-size: .6875rem;
+    opacity: .5;
+}
+
+.history-current,
+.history-current:hover {
+    background: $motion-primary;
+    color: var(--dimod-on-accent, #fff);
+    font-weight: bold;
+}
+
+.history-current .history-dot {
+    background: currentColor;
+    border-color: currentColor;
+}
+
+.history-undone {
+    opacity: .45;
+}
+
+.history-undone .history-dot {
+    border-style: dashed;
+}
+
+.comp-body {
+    display: flex;
+    flex-direction: column;
+    gap: calc(1.5 * $grid-unit);
+    padding: calc(1.5 * $grid-unit);
+}
+
+.comp-row {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .75rem;
+    color: $text-primary;
+}
+
+.comp-label {
+    min-width: 3rem;
+}
+
+.comp-select {
+    flex: 1;
+    min-width: 0;
+    height: 2rem;
+    border: 1px solid $ui-pane-border;
+    border-radius: 2rem;
+    padding: 0 .75rem;
+    font-size: .75rem;
+    font-weight: bold;
+    color: $text-primary;
+    background: white;
+    outline: none;
+}
+
+.comp-select:focus {
+    border-color: $motion-primary;
+}
+
+[theme="dark"] .comp-select {
+    background: rgb(30, 30, 30);
+    color: white;
+    border-color: rgba(255, 255, 255, .15);
+}
+
+.symbol-list {
+    max-height: 9rem;
+    overflow-y: auto;
+    padding: 0.25rem 0.5rem;
+}
+
+.symbol-list .footer-button {
+    margin: 0.1rem;
+}
+
+.symbol-picker {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: .35rem .5rem;
+}
+
+.symbol-search {
+    height: 1.9rem;
+    border: 1px solid $ui-pane-border;
+    border-radius: 2rem;
+    padding: 0 .75rem;
+    font-size: .75rem;
+    background: transparent;
+    color: $text-primary;
+}
+
+.symbol-scroll {
+    max-height: 60vh;
+    min-width: 22rem;
+    overflow-y: auto;
+}
+
+.symbol-head {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: .3rem .1rem;
+    font-size: .75rem;
+    font-weight: 700;
+    color: $text-primary;
+    cursor: pointer;
+}
+
+.symbol-count {
+    opacity: .5;
+    font-weight: 400;
+}
+
+.symbol-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .3rem;
+    padding-bottom: .3rem;
+}
+
+.symbol-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .15rem;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: .4rem;
+    background: transparent;
+    padding: .25rem;
+    cursor: pointer;
+    color: $text-primary;
+}
+
+.symbol-tile:hover {
+    background: $motion-light-transparent;
+}
+
+.symbol-tile-on {
+    border-color: $motion-primary;
+}
+
+.symbol-thumb {
+    width: 100%;
+    height: 3rem;
+    object-fit: contain;
+}
+
+.symbol-name {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .625rem;
+    text-align: center;
+}

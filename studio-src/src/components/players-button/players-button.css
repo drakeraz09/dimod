@@ -1,0 +1,39 @@
+@import "../../css/colors.css";
+
+.players-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.players-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0.375rem;
+    border-radius: 0.25rem;
+    user-select: none;
+    user-drag: none;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.players-btn:hover {
+    background-color: $motion-light-transparent;
+}
+
+.players-count {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    min-width: 0.9rem;
+    height: 0.9rem;
+    padding: 0 0.15rem;
+    border-radius: 0.45rem;
+    box-sizing: border-box;
+    background: #5c5ce6;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: bold;
+    line-height: 0.9rem;
+    text-align: center;
+    pointer-events: none;
+}

@@ -1,0 +1,212 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 510;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: auto;
+    background-color: var(--ui-modal-overlay, hsla(247, 74%, 72%, .9));
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    margin: 100px auto;
+    width: 560px;
+    max-width: calc(100% - 4rem);
+    max-height: calc(100% - 200px);
+    outline: none;
+    border: 4px solid hsla(0, 100%, 100%, .25);
+    border-radius: $space;
+    background: white;
+    overflow: hidden;
+    user-select: none;
+    font-family: var(--dimod-font-ui, "Helvetica Neue", Helvetica, Arial, sans-serif);
+    color: $text-primary;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex-shrink: 0;
+    height: $library-header-height;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 1rem;
+    background-color: $motion-primary;
+    color: var(--dimod-on-accent, white);
+    font-size: 1rem;
+}
+
+.title {
+    flex-grow: 1;
+    text-align: center;
+    letter-spacing: .4px;
+    cursor: default;
+    margin-left: 1.75rem;
+}
+
+.close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: hsla(0, 0%, 0%, .15);
+    box-shadow: 0 0 0 2px hsla(0, 0%, 0%, .15);
+    color: white;
+    font-size: 1.125rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all .15s ease-out;
+}
+
+.close:hover {
+    transform: scale(1.1, 1.1);
+    box-shadow: 0 0 0 4px hsla(0, 0%, 0%, .15);
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * $grid-unit);
+    padding: calc(3 * $grid-unit);
+    overflow-y: auto;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: calc(2 * $grid-unit);
+    padding: calc(2 * $grid-unit) calc(3 * $grid-unit);
+    border-top: 1px solid $ui-pane-border;
+    flex-shrink: 0;
+}
+
+.primary {
+    border: none;
+    border-radius: .5rem;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+    font-size: .8125rem;
+    font-weight: bold;
+    padding: calc(1.5 * $grid-unit) calc(3 * $grid-unit);
+    cursor: pointer;
+}
+
+.primary:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.none {
+    margin: 0;
+    font-size: .8125rem;
+    color: $text-primary;
+    opacity: .7;
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: $grid-unit;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: calc(2 * $grid-unit);
+    padding: calc(1.5 * $grid-unit) calc(2 * $grid-unit);
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    cursor: pointer;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    color: $text-primary;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.row:hover {
+    border-color: $motion-primary;
+}
+
+.row-active {
+    border-color: $motion-primary;
+    box-shadow: inset 0 0 0 1px $motion-primary;
+}
+
+.secondary {
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    background: transparent;
+    color: $text-primary;
+    font-size: .8125rem;
+    padding: calc(1.5 * $grid-unit) calc(3 * $grid-unit);
+    cursor: pointer;
+}
+
+.text-input {
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    padding: calc(1 * $grid-unit) calc(2 * $grid-unit);
+    font-size: .8125rem;
+    color: $text-primary;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.text-input:focus {
+    outline: none;
+    border-color: $motion-primary;
+}
+
+[theme="dark"] .overlay {
+    background-color: rgba(17, 17, 17, .8);
+}
+
+[theme="dark"] .card {
+    background: rgb(30, 30, 30);
+    border-color: hsla(0, 0%, 100%, .1);
+    color-scheme: dark;
+}
+
+[theme="dark"] .close {
+    background-color: hsla(0, 0%, 0%, .3);
+    box-shadow: 0 0 0 2px hsla(0, 0%, 0%, .3);
+}
+
+[theme="dark"] .close:hover {
+    box-shadow: 0 0 0 4px hsla(0, 0%, 0%, .3);
+}
+
+[theme="dark"] .text-input {
+    background: rgb(46, 46, 46);
+    color: $text-primary;
+}
+
+.in-modal {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * $grid-unit);
+}

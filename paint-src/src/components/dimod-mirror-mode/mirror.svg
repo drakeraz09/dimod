@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 -0.9 20 20">
+    <title>mirror</title>
+    <g fill="none" fill-rule="evenodd">
+        <path d="M10 2v16" stroke="#575E75" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2.2 1.8"/>
+        <path d="M8 5.5L3 14h5z" fill="#575E75"/>
+        <path d="M12 5.5L17 14h-5z" fill="#575E75" opacity=".45"/>
+    </g>
+</svg>

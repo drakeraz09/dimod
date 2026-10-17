@@ -1,0 +1,93 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .35);
+}
+
+.sheet {
+    width: min(46rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+    border-radius: .5rem;
+    background: white;
+    box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .25);
+    color: $text-primary;
+}
+
+[theme="dark"] .sheet {
+    background: rgb(30, 30, 30);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .75rem 1rem;
+    border-bottom: 1px solid $ui-pane-border;
+    font-weight: bold;
+    font-size: .9375rem;
+}
+
+.close {
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    color: $text-primary;
+    cursor: pointer;
+}
+
+.columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: .5rem 1.5rem;
+    padding: 1rem;
+}
+
+.section-title {
+    font-size: .6875rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: $motion-primary;
+    margin-bottom: .35rem;
+}
+
+.section {
+    margin-bottom: .75rem;
+}
+
+.row {
+    display: flex;
+    align-items: baseline;
+    gap: .75rem;
+    padding: .2rem 0;
+    font-size: .75rem;
+}
+
+.keys {
+    display: flex;
+    gap: .25rem;
+    flex-shrink: 0;
+    min-width: 8rem;
+}
+
+.keys kbd {
+    font-family: inherit;
+    font-size: .6875rem;
+    padding: .1rem .35rem;
+    border: 1px solid $ui-pane-border;
+    border-bottom-width: 2px;
+    border-radius: .5rem;
+    white-space: nowrap;
+}
+
+.what {
+    opacity: .85;
+}

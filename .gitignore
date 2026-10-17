@@ -1,0 +1,8 @@
+node_modules/
+build/
+dist/
+.webpack/
+paint-src/playground/
+*.log
+.env*
+.DS_Store

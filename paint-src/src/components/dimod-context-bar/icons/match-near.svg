@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 20 20">
+    <title>everything near the click</title>
+    <circle cx="10" cy="10" r="8" fill="none" stroke="#6c5ce7" stroke-width="1.5" stroke-dasharray="3 2.5"/>
+    <circle cx="10" cy="10" r="2.5" fill="#6c5ce7"/>
+</svg>

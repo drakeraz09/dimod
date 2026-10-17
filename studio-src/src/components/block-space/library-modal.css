@@ -1,0 +1,270 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.backdrop {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: hsla(0, 0%, 0%, 0.45);
+}
+
+.modal {
+    display: flex;
+    flex-direction: column;
+    width: min(60rem, 94vw);
+    height: min(40rem, 90vh);
+    background: $ui-secondary;
+    color: $text-primary;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 2rem hsla(0, 0%, 0%, 0.4);
+    overflow: hidden;
+    font-size: 0.85rem;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem $space;
+    border-bottom: 1px solid $ui-black-transparent;
+}
+
+.title {
+    font-weight: bold;
+    margin-right: 0.75rem;
+}
+
+.tab, .tab-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.25rem 0.6rem;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    opacity: 0.65;
+}
+
+.tab-active {
+    border-bottom-color: $motion-primary;
+    opacity: 1;
+}
+
+.spacer {
+    flex-grow: 1;
+}
+
+.close {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1.1rem;
+    opacity: 0.7;
+}
+
+.close:hover {
+    opacity: 1;
+}
+
+.page-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-right: 0.5rem;
+    color: inherit;
+    font-size: 0.8rem;
+    opacity: 0.75;
+    text-decoration: none;
+}
+
+.page-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.note {
+    padding: 0.4rem $space;
+    background: $ui-black-transparent;
+}
+
+.body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+}
+
+.split {
+    flex: 1 1 auto;
+    display: flex;
+    min-width: 0;
+}
+
+.list-side {
+    flex: 0 0 20rem;
+    overflow-y: auto;
+    padding: $space;
+    border-right: 1px solid $ui-black-transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-side, .single {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-y: auto;
+    padding: $space;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.detail-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.card, .card-active {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.card:hover {
+    background: $ui-black-transparent;
+}
+
+.card-active {
+    border-color: $motion-primary;
+}
+
+.card-title {
+    font-weight: bold;
+}
+
+.card-meta {
+    opacity: 0.7;
+    font-size: 0.75rem;
+}
+
+.card-text {
+    opacity: 0.9;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.card-tags {
+    color: $motion-primary;
+    font-size: 0.75rem;
+}
+
+.code, .code-small {
+    margin: 0;
+    padding: 0.5rem;
+    overflow: auto;
+    border-radius: 0.35rem;
+    background: $ui-black-transparent;
+    font-family: monospace;
+    font-size: 0.75rem;
+    white-space: pre;
+}
+
+.code {
+    flex: 1 1 auto;
+    min-height: 8rem;
+}
+
+.code-small {
+    max-height: 9rem;
+}
+
+.warning {
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.35rem;
+    background: hsla(40, 100%, 50%, 0.15);
+    font-size: 0.75rem;
+}
+
+.error {
+    color: $error-primary;
+}
+
+.empty {
+    opacity: 0.6;
+    padding: 0.5rem 0;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.import-row, .mine-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.35rem;
+}
+
+.button, .primary {
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+    padding: 0.3rem 0.8rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.primary {
+    background: $motion-primary;
+    border-color: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+}

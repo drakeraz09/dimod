@@ -1,0 +1,604 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.bar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: calc(2 * $grid-unit);
+    height: 2.5rem;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.bar::-webkit-scrollbar {
+    display: none;
+}
+
+.bar > * {
+    flex-shrink: 0;
+}
+
+.tool-name {
+    font-size: .75rem;
+    font-weight: bold;
+    color: $text-primary;
+    min-width: 3.5rem;
+    padding-right: calc(2 * $grid-unit);
+    border-right: 1px dashed $ui-pane-border;
+    line-height: 2rem;
+    user-select: none;
+}
+
+[dir="rtl"] .tool-name {
+    padding-right: 0;
+    padding-left: calc(2 * $grid-unit);
+    border-right: none;
+    border-left: 1px dashed $ui-pane-border;
+}
+
+.group {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    border: 1px solid $ui-pane-border;
+    border-radius: .375rem;
+    padding: 1px;
+    gap: 1px;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.button:not(:disabled):hover {
+    background-color: $motion-light-transparent;
+}
+
+.button:disabled {
+    cursor: default;
+}
+
+.button:disabled .icon {
+    opacity: .3;
+}
+
+.button-active,
+.button-active:not(:disabled):hover {
+    background-color: $motion-primary;
+}
+
+.button-active .icon {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+
+.icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    pointer-events: none;
+}
+
+[theme="dark"] .icon {
+    filter: var(--dimod-dark-icon-filter, brightness(1.7));
+}
+
+[theme="dark"] .button-active .icon {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+
+.bar .menu {
+    display: flex;
+    align-items: center;
+    height: 2rem;
+    box-sizing: border-box;
+    padding: 0 .375rem;
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    cursor: pointer;
+}
+
+.bar .menu:hover {
+    background-color: $motion-light-transparent;
+}
+
+.menu-label {
+    display: flex;
+    align-items: center;
+    gap: $grid-unit;
+}
+
+.menu-text {
+    font-size: .75rem;
+    color: $text-primary;
+    max-width: 7rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.popover {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: $grid-unit;
+    gap: $grid-unit;
+}
+
+.text-button {
+    border: none;
+    border-radius: .5rem;
+    padding: .25rem .5rem;
+    margin-right: $grid-unit;
+    font-size: .75rem;
+    transition: .2s;
+}
+
+.shape-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 340px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.shape-category {
+    width: 100%;
+    margin: $grid-unit 0 0;
+    font-size: .6875rem;
+    font-weight: bold;
+    color: $text-primary;
+}
+
+.shape-item {
+    margin: 0;
+}
+
+.field {
+    display: flex;
+    align-items: center;
+    gap: calc(1.5 * $grid-unit);
+}
+
+.field-label {
+    font-size: .625rem;
+    font-weight: bold;
+    color: $text-primary;
+    user-select: none;
+}
+
+.field-disabled {
+    opacity: .35;
+    pointer-events: none;
+}
+
+.hint {
+    font-size: .75rem;
+    color: $text-primary;
+    opacity: .6;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.font {
+    display: flex;
+    align-items: center;
+}
+
+.fade-end {
+    mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+}
+
+.fade-start {
+    mask-image: linear-gradient(to left, black calc(100% - 2.5rem), transparent);
+}
+
+.fade-start.fade-end {
+    mask-image: linear-gradient(to right, transparent, black 2.5rem, black calc(100% - 2.5rem), transparent);
+}
+
+.options {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: calc(2 * $grid-unit);
+    flex-shrink: 0;
+}
+
+.chips {
+    display: flex;
+    gap: 2px;
+}
+
+.chip {
+    min-width: 1.6rem;
+    height: 1.6rem;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    color: $text-primary;
+    font-size: .75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.chip:hover {
+    background: $motion-light-transparent;
+}
+
+.chip-active,
+.chip-active:hover {
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.kaleido-fields {
+    display: contents;
+}
+
+.chip-wide {
+    padding: 0 .5rem;
+}
+
+.preset-chip {
+    display: inline-flex;
+    align-items: center;
+}
+
+.preset-remove {
+    width: .9rem;
+    height: .9rem;
+    margin-left: -.2rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: $text-primary;
+    opacity: .6;
+    font-size: .7rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.preset-remove:hover {
+    background: $motion-light-transparent;
+    opacity: 1;
+}
+
+.text-button:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.dial {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+}
+
+.dial-arrow {
+    width: 1.5rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: $text-primary;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.dial-arrow:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.dial-knob {
+    position: relative;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid $ui-pane-border;
+    border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+}
+
+.dial-knob:active {
+    cursor: grabbing;
+}
+
+.dial-disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.dial-pointer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.dial-pointer::after {
+    content: "";
+    position: absolute;
+    top: calc(50% - 1px);
+    left: 50%;
+    width: 45%;
+    height: 2px;
+    border-radius: 1px;
+    background: $motion-primary;
+}
+
+.dial-step {
+    width: 3rem;
+    height: 1.75rem;
+    padding: 0 .25rem;
+    border: 1px solid $ui-pane-border;
+    border-radius: .5rem;
+    background: transparent;
+    color: $text-primary;
+    font-size: .75rem;
+}
+
+.dial-step-unit {
+    margin-left: -.2rem;
+    font-size: .75rem;
+    color: $text-primary;
+}
+
+.bubble-anchor {
+    display: flex;
+}
+
+.bubble-trigger {
+    position: relative;
+    border-radius: .5rem;
+}
+
+.bubble-trigger::after {
+    content: "";
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    border: 2.5px solid transparent;
+    border-right-color: $text-primary;
+    border-bottom-color: $text-primary;
+    opacity: .45;
+}
+
+.button-active.bubble-trigger::after {
+    border-right-color: white;
+    border-bottom-color: white;
+    opacity: .8;
+}
+
+.bubble-trigger-open {
+    background-color: $motion-light-transparent;
+}
+
+.bubble {
+    position: fixed;
+    z-index: 5000;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    max-width: 18rem;
+    color: $text-primary;
+    font-size: .75rem;
+    border: 1px solid var(--paint-ui-pane-border, #ddd);
+    border-radius: .5rem;
+    background: var(--ui-primary, white);
+    box-shadow: 0 0 8px 1px rgba(0, 0, 0, .3);
+    animation: bubble-drop 500ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-paint-theme="dark"] .bubble {
+    background: var(--ui-primary, rgb(30, 30, 30));
+}
+
+.bubble::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: calc(var(--arrow-x, 50%) - 7px);
+    border: 7px solid transparent;
+    border-bottom-color: var(--ui-primary, white);
+    filter: drop-shadow(0 -1px 0 var(--paint-ui-pane-border, #ddd));
+}
+
+@keyframes bubble-drop {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+}
+
+.bubble-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+}
+
+.bubble-divider {
+    height: 1px;
+    margin: 2px 0;
+    background: var(--paint-ui-pane-border, #ddd);
+}
+
+.bubble-tile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    cursor: pointer;
+}
+
+.bubble-tile:not(:disabled):hover {
+    background-color: $motion-light-transparent;
+}
+
+.bubble-tile:disabled {
+    cursor: default;
+}
+
+.bubble-tile:disabled .icon {
+    opacity: .3;
+}
+
+.bubble-tile-active,
+.bubble-tile-active:not(:disabled):hover {
+    background-color: $motion-primary;
+}
+
+.bubble-tile-active .icon {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+
+.bubble-chip {
+    height: 1.5rem;
+    padding: 0 .5rem;
+    color: inherit;
+    font: inherit;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: .2s;
+}
+
+.bubble-chip:hover {
+    background-color: $motion-light-transparent;
+}
+
+.bubble-chip-active,
+.bubble-chip-active:hover {
+    color: var(--dimod-on-accent, white);
+    background-color: $motion-primary;
+}
+
+.brush-thumb {
+    width: 1.35rem;
+    height: 1.35rem;
+    object-fit: contain;
+}
+
+[theme="dark"] .icon.brush-thumb,
+[data-paint-theme="dark"] .icon.brush-thumb {
+    filter: invert(1);
+}
+
+.bubble-tile-active .icon.brush-thumb,
+[theme="dark"] .bubble-tile-active .icon.brush-thumb,
+[data-paint-theme="dark"] .bubble-tile-active .icon.brush-thumb {
+    filter: brightness(0) invert(1);
+}
+
+.bubble-remove {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    display: none;
+    width: 13px;
+    height: 13px;
+    padding: 0;
+    color: white;
+    font-size: 10px;
+    line-height: 12px;
+    text-align: center;
+    border: none;
+    border-radius: 50%;
+    background: #e5484d;
+    cursor: pointer;
+}
+
+.bubble-tile:hover .bubble-remove {
+    display: block;
+}
+
+.bubble-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.bubble-line input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 1.5rem;
+    padding: 0 .375rem;
+    color: inherit;
+    font: inherit;
+    border: 1px solid var(--paint-ui-pane-border, #ddd);
+    border-radius: .5rem;
+    background: transparent;
+}
+
+.bubble-note {
+    max-width: 14rem;
+    opacity: .7;
+    white-space: normal;
+}
+
+.bubble-error {
+    color: #e5484d;
+    white-space: normal;
+}
+
+.hidden-input {
+    display: none;
+}
+
+.text-button:hover {
+    background: $motion-light-transparent;
+}
+
+.line-style-body {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    min-width: 16rem;
+    padding: .25rem;
+}
+
+.line-style-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+}
+
+.line-style-row .bubble-tile {
+    width: auto;
+    min-width: 2rem;
+    padding: 0 .5rem;
+}
+
+.line-style-label {
+    margin-right: .25rem;
+}

@@ -1,0 +1,32 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.group {
+    margin: 0.5rem 0 0.1rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    opacity: 0.65;
+}
+
+.group:first-child {
+    margin-top: 0;
+}
+
+.hint {
+    opacity: 0.7;
+    font-size: 0.8rem;
+}
+
+.code {
+    flex: 1 1 auto;
+    min-height: 8rem;
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    overflow: auto;
+    border-radius: 0.35rem;
+    line-height: 1.45;
+    tab-size: 4;
+    white-space: pre;
+}

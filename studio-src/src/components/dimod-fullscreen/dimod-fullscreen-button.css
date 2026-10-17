@@ -1,0 +1,38 @@
+@import "../../css/colors.css";
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: calc(1.95rem + 2px);
+    min-width: calc(1.95rem + 2px);
+    padding: 0 .35rem;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    color: $text-primary;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.button:hover {
+    background: $motion-light-transparent;
+}
+
+.on,
+.on:hover {
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+:global([data-dimod-fullscreen="true"]) {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 505;
+    padding: .5rem;
+    background: $ui-primary;
+}

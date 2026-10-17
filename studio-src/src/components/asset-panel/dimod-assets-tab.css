@@ -1,0 +1,422 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+.root {
+    position: relative;
+    display: flex;
+    flex-grow: 1;
+    height: 100%;
+    min-width: 0;
+}
+
+.root > * {
+    flex-grow: 1;
+}
+
+.dropping::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 2px dashed var(--dimod-motion-primary, #6c5ce7);
+    border-radius: $space;
+    background: color-mix(in srgb, var(--dimod-motion-primary, #6c5ce7) 8%, transparent);
+    pointer-events: none;
+    z-index: 20;
+}
+
+.drop-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    padding: 0.375rem 0.875rem;
+    border-radius: 1rem;
+    background: var(--dimod-motion-primary, #6c5ce7);
+    color: var(--dimod-on-accent, #fff);
+    font-size: 0.8125rem;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 21;
+}
+
+.detail {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem 0.625rem;
+    box-sizing: border-box;
+}
+
+.head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.name,
+.name-input {
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    color: inherit;
+}
+
+.name {
+    padding: 0.125rem 0.375rem;
+    margin-left: -0.375rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: calc($space / 2);
+    cursor: text;
+}
+
+.name:hover {
+    border-color: $ui-black-transparent;
+}
+
+.name-input {
+    width: 14rem;
+    padding: 0.125rem 0.375rem;
+    margin-left: -0.375rem;
+    background: $ui-white;
+    border: 1px solid $motion-primary;
+    border-radius: calc($space / 2);
+    outline: none;
+}
+
+[theme="dark"] .name-input {
+    background: $ui-secondary;
+}
+
+.chip {
+    padding: 0.0625rem 0.5rem;
+    border-radius: 1rem;
+    background: $motion-light-transparent;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.meta {
+    opacity: 0.65;
+    font-size: 0.8125rem;
+}
+
+.spacer {
+    flex-grow: 1;
+}
+
+.head-button,
+.select,
+.segmented button {
+    height: 1.75rem;
+    padding: 0 0.75rem;
+    background: $ui-white;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8125rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space;
+    cursor: pointer;
+}
+
+[theme="dark"] .head-button,
+[theme="dark"] .select,
+[theme="dark"] .segmented button {
+    background: $ui-secondary;
+}
+
+.head-button:hover,
+.segmented button:hover {
+    border-color: $motion-primary;
+}
+
+.select {
+    padding: 0 0.375rem;
+}
+
+.segmented {
+    display: flex;
+}
+
+.segmented button {
+    border-radius: 0;
+}
+
+.segmented button:first-child {
+    border-radius: $space 0 0 $space;
+}
+
+.segmented button:last-child {
+    border-radius: 0 $space $space 0;
+    margin-left: -1px;
+}
+
+.segmented .segment-on,
+.segmented .segment-on:hover {
+    background: $motion-primary;
+    border-color: $motion-primary;
+    color: var(--dimod-on-accent, $ui-white);
+}
+
+.body {
+    position: relative;
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.paint-box,
+.sound-box {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.code-box {
+    flex-grow: 1;
+    min-height: 10rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space;
+    overflow: hidden;
+}
+
+.anim-box {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    gap: 0.5rem;
+}
+
+.anim-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    min-height: 8rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space;
+    background: repeating-conic-gradient(hsla(0, 0%, 50%, 0.12) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+}
+
+.anim-stage img {
+    width: min(18rem, 80%);
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: auto;
+}
+
+.anim-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.anim-parts {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+:global([data-dimod-drop-over="true"]) {
+    box-shadow: inset 0 0 0 2px $motion-primary !important;
+    background: $motion-light-transparent !important;
+}
+
+.media-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    min-height: 0;
+    gap: 0.75rem;
+}
+
+.image-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    flex-grow: 1;
+    min-height: 8rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space;
+    background: repeating-conic-gradient($ui-secondary 0% 25%, $ui-primary 0% 50%) 50% / 16px 16px;
+    overflow: hidden;
+}
+
+.image-box img {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.video {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: $space;
+    background: #000;
+}
+
+.pdf {
+    flex-grow: 1;
+    width: 100%;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space;
+    background: $ui-white;
+}
+
+.font-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: auto;
+}
+
+.font-input {
+    padding: 0.375rem 0.5rem;
+    font: inherit;
+    color: inherit;
+    background: $ui-white;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space;
+}
+
+[theme="dark"] .font-input {
+    background: $ui-secondary;
+}
+
+.hex {
+    max-width: 100%;
+    margin: 0;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    opacity: 0.6;
+}
+
+.loading {
+    flex-grow: 1;
+    border-radius: $space;
+    background: linear-gradient(90deg, transparent, $motion-light-transparent, transparent) 0 0 / 200% 100%;
+    animation: dimod-asset-shimmer 1.2s linear infinite;
+}
+
+@keyframes dimod-asset-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.blocked {
+    margin: auto;
+    max-width: 22rem;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.link-button {
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--dimod-accent-text, $motion-primary);
+    font: inherit;
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.note {
+    margin: 0;
+    opacity: 0.7;
+    font-size: 0.8rem;
+}
+
+.empty {
+    margin: auto;
+    max-width: 26rem;
+    padding: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background: $motion-primary;
+    box-shadow: 0 0 0 6px $motion-transparent;
+}
+
+.empty-icon img {
+    width: 2rem;
+    filter: var(--dimod-on-accent-filter, none);
+}
+
+.empty-title {
+    margin: 0.5rem 0 0;
+    font-size: 1.125rem;
+    font-weight: bold;
+}
+
+.empty-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+body[editor-theme="godot"] .head-button,
+body[editor-theme="godot"] .select,
+body[editor-theme="godot"] .segmented button,
+body[editor-theme="godot"] .name-input,
+body[editor-theme="godot"] .font-input {
+    background: var(--g-raised);
+    border-color: var(--g-line);
+    border-radius: var(--g-radius);
+}
+
+body[editor-theme="godot"] .head-button:hover,
+body[editor-theme="godot"] .segmented button:hover {
+    background: var(--g-hover);
+    border-color: var(--g-line);
+}
+
+body[editor-theme="godot"] .segmented .segment-on {
+    background: var(--g-accent);
+    border-color: var(--g-accent);
+    color: var(--g-on-accent);
+}
+
+body[editor-theme="godot"] .code-box,
+body[editor-theme="godot"] .image-box {
+    border-color: var(--g-line);
+    border-radius: var(--g-radius);
+}
+
+body[editor-theme="godot"] .empty-icon {
+    border-radius: 8px;
+    background: var(--g-raised);
+    box-shadow: none;
+    border: 1px solid var(--g-line);
+}
+
+body[editor-theme="godot"] .empty-icon img {
+    filter: var(--g-icon-filter, brightness(0) invert(0.88));
+}

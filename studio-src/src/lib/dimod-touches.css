@@ -1,0 +1,72 @@
+@media (prefers-reduced-motion: no-preference) {
+    [data-dimod-pulse] { animation: dimod-flag-pulse 460ms cubic-bezier(.3, .7, .4, 1); }
+    .dimod-saved-tick { animation: dimod-tick-pop 380ms cubic-bezier(.3, 1.6, .5, 1); }
+    body:not([editor-theme="godot"]) [class*="gui_tab_"][class*="is-selected"]::before { animation: dimod-underline 160ms ease-out; }
+}
+@keyframes dimod-flag-pulse {
+    0% { transform: scale(0.86); box-shadow: 0 0 0 0 rgba(76, 191, 86, 0.65); }
+    45% { transform: scale(1.1); }
+    100% { transform: scale(1); box-shadow: 0 0 0 12px rgba(76, 191, 86, 0); }
+}
+@keyframes dimod-tick-pop {
+    0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+    100% { transform: none; opacity: 1; }
+}
+@keyframes dimod-underline {
+    from { transform: translateX(-50%) scaleX(0); }
+}
+.dimod-saved-tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    margin-right: 0.35em;
+    border-radius: 50%;
+    background: #2ecc71;
+    color: #fff;
+    font-size: 0.8em;
+    font-weight: bold;
+    vertical-align: -0.1em;
+}
+body:not([editor-theme="godot"]) [class*="gui_tab_"][class*="is-selected"] { position: relative; }
+body:not([editor-theme="godot"]) [class*="gui_tab_"][class*="is-selected"]::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 1.75rem;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--dimod-motion-primary, #6c5ce7);
+    transform: translateX(-50%);
+}
+[class*="selector_list-item_"][class*="selector_placeholder_"],
+[class*="sprite-selector_placeholder_"] > [class*="sprite-selector_sprite_"] {
+    background: color-mix(in srgb, var(--dimod-motion-primary, #6c5ce7) 10%, transparent);
+    filter: none;
+    outline: 2px dashed var(--dimod-motion-primary, #6c5ce7);
+    outline-offset: -2px;
+    border-radius: 0.5rem;
+}
+[class*="selector_list-item_"][class*="selector_placeholder_"] > *,
+[class*="sprite-selector_placeholder_"] > [class*="sprite-selector_sprite_"] > * {
+    opacity: 0.35;
+}
+.dimod-monaco-colors {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin: 6px 22px 0 0;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    color: inherit;
+    opacity: 0.45;
+    cursor: pointer;
+    transition: opacity 80ms;
+}
+.dimod-monaco-colors:hover { opacity: 1; }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="20px" height="20px" viewBox="-1.092 -0.817 21.634 21.634" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <title>New Animation</title>
+    <path fill="#FFFFFF" d="M13.5 4.2l5.3 5.3a.7.7 0 0 1 0 1l-5.3 5.3a.7.7 0 0 1-1 0L7.2 10.5a.7.7 0 0 1 0-1l5.3-5.3a.7.7 0 0 1 1 0z"/>
+    <circle cx="4.6" cy="10" r="1.9" fill="#FFFFFF" fill-opacity=".7"/>
+    <circle cx="1.6" cy="10" r="1.2" fill="#FFFFFF" fill-opacity=".45"/>
+</svg>

@@ -1,0 +1,408 @@
+body[editor-theme="godot"] {
+    --g-accent: var(--dimod-motion-primary, #6c5ce7);
+    --g-on-accent: var(--dimod-on-accent, #fff);
+    --g-tint: color-mix(in srgb, var(--g-accent) 24%, transparent);
+    --g-tint-soft: color-mix(in srgb, var(--g-accent) 12%, transparent);
+    --g-radius: 3px;
+    --g-bar: var(--g-accent);
+    --g-on-bar: var(--g-on-accent);
+    --g-bar-filter: var(--dimod-on-accent-filter, none);
+    --ui-primary: var(--g-dark2);
+    --ui-secondary: var(--g-base);
+    --ui-tertiary: var(--g-raised);
+    --ui-modal-overlay: var(--g-overlay);
+    --ui-black-transparent: var(--g-black-transparent);
+    --text-primary: var(--g-text);
+    --paint-ui-pane-border: var(--g-line);
+    --paint-text-primary: var(--g-text);
+    --paint-form-border: var(--g-line);
+    --dimod-drop-highlight: var(--g-accent-hi);
+    background: var(--g-dark1);
+    color: var(--g-text);
+}
+body[editor-theme="godot"] *,
+body[editor-theme="godot"] *::before,
+body[editor-theme="godot"] *::after {
+    transition-duration: 60ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+}
+body[editor-theme="godot"] *:not([class*="spinner"]):not([class*="loader"]):not([class*="loading"]):not([class*="progress"]):not([class*="theme-picker_"]):not([class*="action-menu_"]),
+body[editor-theme="godot"] *:not([class*="spinner"]):not([class*="loader"]):not([class*="loading"]):not([class*="progress"]):not([class*="theme-picker_"]):not([class*="action-menu_"])::before,
+body[editor-theme="godot"] *:not([class*="spinner"]):not([class*="loader"]):not([class*="loading"]):not([class*="progress"]):not([class*="theme-picker_"]):not([class*="action-menu_"])::after {
+    animation-duration: 80ms !important;
+    animation-iteration-count: 1 !important;
+}
+body[editor-theme="godot"] [class*="hoverable"]:hover,
+body[editor-theme="godot"] button:hover,
+body[editor-theme="godot"] [class*="sprite-selector-item"]:hover {
+    transform: none !important;
+}
+body[editor-theme="godot"] [class*="menu-bar_menu-bar_"] {
+    background: var(--g-bar);
+    border-bottom: 1px solid var(--g-line);
+    height: 2.5rem;
+    box-shadow: none;
+    color: var(--g-on-bar);
+}
+body[editor-theme="godot"] [class*="menu-bar_menu-bar-item_"] {
+    border-radius: var(--g-radius);
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+body[editor-theme="godot"] [class*="menu-bar_hoverable_"]:hover,
+body[editor-theme="godot"] [class*="menu-bar_menu-bar-item_"].active,
+body[editor-theme="godot"] [class*="menu-bar_active_"] {
+    background: var(--g-bar-hover);
+}
+body[editor-theme="godot"] [class*="menu-bar_menu-bar_"] [class*="menu-bar_menu-bar-item_"] img {
+    filter: var(--g-bar-filter);
+}
+body[editor-theme="godot"] [class*="menu-bar_menu-bar_"] input[type="text"],
+body[editor-theme="godot"] [class*="menu-bar_menu-bar_"] [class*="project-title-input"] {
+    background: var(--g-dark1);
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+    color: var(--g-text);
+}
+body[editor-theme="godot"] [class*="menu-bar_menu-bar_"] [class*="button_outlined-button_"],
+body[editor-theme="godot"] [class*="menu-bar_menu-bar_"] [class*="share-button"] {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: var(--g-radius);
+    color: var(--g-on-bar);
+}
+body[editor-theme="godot"] [class*="react-tabs_react-tabs__tab-list_"],
+body[editor-theme="godot"] [class*="gui_tab-list_"] {
+    background: var(--g-dark1);
+    border-bottom: 1px solid var(--g-line);
+    gap: 6px;
+}
+body[editor-theme="godot"] [dir] [class*="gui_tab_"],
+body[editor-theme="godot"] [class*="gui_tab_"] { margin-left: 0; margin-right: 0; }
+body[editor-theme="godot"] [class*="gui_tab_"] {
+    background: transparent;
+    color: var(--g-dim);
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: var(--g-radius) var(--g-radius) 0 0;
+    height: 2.1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+body[editor-theme="godot"] [class*="gui_tab_"]:hover {
+    background: var(--g-raised);
+    color: var(--g-text);
+}
+body[editor-theme="godot"] [class*="gui_tab_"][class*="is-selected"],
+body[editor-theme="godot"] [class*="gui_tab_"][aria-selected="true"] {
+    background: var(--g-base);
+    color: var(--g-text);
+    border-color: var(--g-line);
+    box-shadow: inset 0 2px 0 var(--g-accent);
+}
+body[editor-theme="godot"] [class*="gui_tab-panel_"] {
+    background: var(--g-base);
+    border-color: var(--g-line);
+}
+body[editor-theme="godot"] [class*="gui_editor-wrapper_"],
+body[editor-theme="godot"] [class*="gui_body-wrapper_"],
+body[editor-theme="godot"] [class*="gui_page-wrapper_"] {
+    background: var(--g-dark1);
+}
+body[editor-theme="godot"] [class*="gui_stage-and-target-wrapper_"],
+body[editor-theme="godot"] [class*="target-pane_target-pane_"],
+body[editor-theme="godot"] [class*="sprite-selector_sprite-selector_"],
+body[editor-theme="godot"] [class*="stage-selector_stage-selector_"],
+body[editor-theme="godot"] [class*="sprite-info_sprite-info_"],
+body[editor-theme="godot"] [class*="asset-panel_wrapper_"],
+body[editor-theme="godot"] [class*="selector_list-area_"],
+body[editor-theme="godot"] [class*="selector_wrapper_"] {
+    background: var(--g-base);
+    border-color: var(--g-line);
+    border-radius: var(--g-radius);
+    box-shadow: none;
+}
+body[editor-theme="godot"] [class*="stage-header_stage-header-wrapper_"],
+body[editor-theme="godot"] [class*="stage-header_stage-menu-wrapper_"] {
+    background: var(--g-dark1);
+    border-bottom: 1px solid var(--g-line);
+}
+body[editor-theme="godot"] [class*="stage_stage_"],
+body[editor-theme="godot"] [class*="stage_stage-wrapper_"] {
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+body[editor-theme="godot"] [class*="stage-wrapper_stage-canvas-wrapper_"] {
+    background: var(--g-dark2);
+    background-image: linear-gradient(var(--g-stage-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--g-stage-grid) 1px, transparent 1px);
+    background-size: 16px 16px;
+}
+body[editor-theme="godot"] [class*="sprite-selector-item_sprite-selector-item_"],
+body[editor-theme="godot"] [class*="stage-selector_stage-selector_"] {
+    background: var(--g-dark1);
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+    color: var(--g-text);
+}
+body[editor-theme="godot"] [class*="sprite-selector-item_sprite-selector-item_"]:hover {
+    background: var(--g-raised);
+    border-color: var(--g-accent);
+}
+body[editor-theme="godot"] [class*="sprite-selector-item_is-selected_"],
+body[editor-theme="godot"] [class*="stage-selector_is-selected_"] {
+    background: var(--g-tint);
+    border-color: var(--g-accent);
+    box-shadow: none;
+}
+body[editor-theme="godot"] input[type="text"],
+body[editor-theme="godot"] input[type="number"],
+body[editor-theme="godot"] input:not([type]),
+body[editor-theme="godot"] select,
+body[editor-theme="godot"] textarea,
+body[editor-theme="godot"] [class*="input_input-form_"] {
+    background: var(--g-dark1);
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+    color: var(--g-text);
+}
+body[editor-theme="godot"] input:focus,
+body[editor-theme="godot"] select:focus,
+body[editor-theme="godot"] textarea:focus {
+    outline: none;
+    border-color: var(--g-accent);
+    box-shadow: 0 0 0 1px var(--g-accent);
+}
+body[editor-theme="godot"] [class*="button_outlined-button_"],
+body[editor-theme="godot"] [class*="button_button_"] {
+    border-radius: var(--g-radius);
+}
+body[editor-theme="godot"] [class*="action-menu_main-button_"],
+body[editor-theme="godot"] [class*="action-menu_more-button_"] {
+    background: var(--g-accent);
+    border: 1px solid var(--g-line);
+    box-shadow: none;
+}
+body[editor-theme="godot"] [class*="action-menu_"] img { filter: var(--dimod-on-accent-filter, none); }
+body[editor-theme="godot"] [class*="controls_controls-container_"] [class*="green-flag"],
+body[editor-theme="godot"] [class*="controls_controls-container_"] [class*="stop-all"],
+body[editor-theme="godot"] [class*="controls_controls-container_"] [class*="pause-button"] {
+    border-radius: var(--g-radius);
+}
+body[editor-theme="godot"] [class*="modal_modal-content_"],
+body[editor-theme="godot"] [class*="library_library-scroll-grid_"],
+body[editor-theme="godot"] .react-contextmenu,
+body[editor-theme="godot"] [class*="context-menu_context-menu_"],
+body[editor-theme="godot"] [class*="menu_menu_"],
+body[editor-theme="godot"] [class*="menu_menu-section_"] {
+    background: var(--g-base);
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+    color: var(--g-text);
+    box-shadow: 0 6px 18px var(--g-shadow);
+}
+body[editor-theme="godot"] [class*="modal_header_"] {
+    background: var(--g-dark2);
+    border-bottom: 1px solid var(--g-line);
+}
+body[editor-theme="godot"] .react-contextmenu-item--selected,
+body[editor-theme="godot"] [class*="menu_menu-item_"]:hover,
+body[editor-theme="godot"] [class*="context-menu_menu-item_"]:hover {
+    background: var(--g-accent);
+    color: var(--g-on-accent);
+}
+body[editor-theme="godot"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+body[editor-theme="godot"] ::-webkit-scrollbar-track { background: var(--g-dark1); }
+body[editor-theme="godot"] ::-webkit-scrollbar-thumb {
+    background: var(--g-scroll);
+    border: 2px solid var(--g-dark1);
+    border-radius: 6px;
+}
+body[editor-theme="godot"] ::-webkit-scrollbar-thumb:hover { background: var(--g-scroll-hover); }
+body[editor-theme="godot"] .blocklySvg {
+    background-color: var(--g-dark1) !important;
+}
+body[editor-theme="godot"] [id^="blocklyGridPattern"] > line { stroke: var(--g-grid); }
+body[editor-theme="godot"] .blocklyFlyoutBackground { fill: var(--g-base); }
+body[editor-theme="godot"] .blocklyToolboxDiv,
+body[editor-theme="godot"] .scratchCategoryMenu {
+    background: var(--g-dark2) !important;
+    border-right: 1px solid var(--g-line);
+}
+body[editor-theme="godot"] .scratchCategoryMenuItem.categorySelected {
+    position: relative;
+    background: var(--g-raised);
+    box-shadow: none;
+}
+body[editor-theme="godot"] .scratchCategoryMenuItem.categorySelected::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 18%;
+    bottom: 18%;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--g-accent);
+}
+body[editor-theme="godot"] .scratchCategoryMenuItem:hover { background: var(--g-base); }
+body[editor-theme="godot"] .scratchCategoryItemBubble { border: 1px solid rgba(0, 0, 0, 0.45) !important; }
+body[editor-theme="godot"] .blocklyScrollbarHandle { fill: var(--g-scroll); }
+body[editor-theme="godot"][theme="dark"] [data-paint-theme="dark"] [class*="paper-canvas_paper-canvas_"],
+body[editor-theme="godot"][theme="light"] [data-paint-theme="light"] [class*="paper-canvas_paper-canvas_"] {
+    background-color: var(--g-dark2);
+}
+body[editor-theme="godot"] [class*="paint-editor_editor-container_"],
+body[editor-theme="godot"] [class*="sound-editor_editor-container_"] {
+    background: var(--g-base);
+}
+body[editor-theme="godot"] [class*="sound-editor_"] [class*="sound-editor_button_"] {
+    background: var(--g-raised);
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+}
+body[editor-theme="godot"] [class*="sound-editor_round-button_"] {
+    background: var(--g-accent);
+    border: none;
+    border-radius: var(--g-radius);
+}
+body[editor-theme="godot"] [class*="sound-editor_round-button_"] > img { filter: var(--dimod-on-accent-filter, none); }
+body[editor-theme="godot"] [class*="waveform_"] {
+    background: var(--g-dark2);
+}
+body[editor-theme="godot"] [class*="waveform_"] path,
+body[editor-theme="godot"] [class*="waveform_"] rect {
+    stroke: var(--g-accent-hi);
+}
+body[editor-theme="godot"] .ks5 {
+    --k-accent: var(--g-accent);
+    --k-on-accent: var(--g-on-accent);
+    --k-accent-2: var(--dimod-motion-tertiary, var(--g-accent));
+    --k-accent-text: var(--g-accent-hi);
+    --k-bar: var(--g-accent);
+    --k-bg: var(--g-dark1);
+    --k-panel: var(--g-base);
+    --k-panel-2: var(--g-dark1);
+    --k-panel-3: var(--g-raised);
+    --k-border: var(--g-line);
+    --k-form-border: var(--g-line);
+    --k-text: var(--g-text);
+    --k-text-2: var(--g-dim);
+    --k-canvas-bg: var(--g-dark2);
+    --k-grid: var(--g-k-grid);
+    --k-grid-2: var(--g-k-grid-2);
+    --k-radius: var(--g-radius);
+    --k-radius-sm: var(--g-radius);
+    --k-shadow: 0 4px 12px var(--g-shadow);
+}
+body[editor-theme="godot"] .ks5 .k5-menubar {
+    color: var(--g-on-bar);
+    height: 2.5rem;
+    border-bottom: 1px solid var(--g-line);
+}
+body[editor-theme="godot"] [class*="selector_wrapper_"] {
+    background: var(--g-dark1);
+}
+body[editor-theme="godot"] [class*="selector_new-buttons_"]:before {
+    background: linear-gradient(transparent, var(--g-dark1));
+}
+body[editor-theme="godot"] [class*="selector_select-button_"],
+body[editor-theme="godot"] [class*="action-menu_main-button_"],
+body[editor-theme="godot"] [class*="action-menu_more-button_"] {
+    border-radius: 6px;
+    background: var(--g-raised);
+    border: 1px solid var(--g-line);
+    box-shadow: none;
+}
+body[editor-theme="godot"] [class*="selector_select-button_"] svg,
+body[editor-theme="godot"] [class*="action-menu_main-button_"] img,
+body[editor-theme="godot"] [class*="action-menu_more-button_"] img {
+    filter: var(--g-icon-filter);
+}
+body[editor-theme="godot"] [class*="selector_select-button_"]:hover,
+body[editor-theme="godot"] [class*="action-menu_main-button_"]:hover {
+    background: var(--g-hover);
+    transform: none;
+}
+body[editor-theme="godot"] [class*="selector_select-button_"][class*="select-button-on"],
+body[editor-theme="godot"] [class*="selector_select-button_"][class*="select-button-on"]:hover {
+    background: var(--g-accent);
+    border-color: var(--g-accent);
+}
+body[editor-theme="godot"] [class*="selector_select-button_"][class*="select-button-on"] svg {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+body[editor-theme="godot"] [class*="bulk-bar"] {
+    background: var(--g-base);
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+    color: var(--g-text);
+}
+body[editor-theme="godot"] [class*="editor-tools_palette-input_"] { background: var(--g-dark2); color: var(--g-text); border-color: var(--g-dark3); }
+body[editor-theme="godot"] [class*="editor-tools_palette-input_"]::placeholder { color: var(--g-dim); opacity: 1; }
+body[editor-theme="godot"] [class*="action-menu_more-buttons-outer_"] {
+    background: var(--g-raised);
+    border: 1px solid var(--g-line);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+}
+body[editor-theme="godot"] [class*="action-menu_more-buttons_"] { border-radius: 6px 6px 0 0; }
+body[editor-theme="godot"] [class*="action-menu_more-button_"] {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+}
+body[editor-theme="godot"] [class*="action-menu_more-button_"]:hover { background: var(--g-hover); }
+body[editor-theme="godot"] [class*="action-menu_tooltip_"],
+body[editor-theme="godot"] [class*="theme-picker_tip_"] {
+    background: var(--g-dark2) !important;
+    color: var(--g-text) !important;
+    border: 1px solid var(--g-line);
+    border-radius: var(--g-radius);
+}
+body[editor-theme="godot"] [class*="theme-picker_pill_"] {
+    background: var(--g-raised);
+    border: 1px solid var(--g-line);
+    border-radius: 6px;
+    box-shadow: 0 6px 16px var(--g-shadow);
+    padding: 2px;
+    gap: 2px;
+}
+body[editor-theme="godot"] [class*="theme-picker_item_"] {
+    border-radius: 4px;
+    color: var(--g-text);
+}
+body[editor-theme="godot"] [class*="theme-picker_item_"]:hover { background: var(--g-hover); }
+body[editor-theme="godot"] [class*="theme-picker_active_"] {
+    background: var(--g-tint);
+    color: var(--g-accent-hi);
+    box-shadow: none;
+}
+body[editor-theme="godot"] [class*="action-menu_tooltip_"]:after { background-color: var(--g-dark2) !important; }
+body[editor-theme="godot"] [class*="theme-picker_column_"] + [class*="theme-picker_column_"] { border-left-color: var(--g-line); }
+body[editor-theme="godot"] [class*="theme-picker_gap_"] { color: var(--g-dim); }
+body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons-outer_"] {
+    animation: dimod-fly-grow 220ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes dimod-fly-grow {
+    from { clip-path: inset(100% -20px 0 -20px); }
+    to { clip-path: inset(-20px -20px 0 -20px); }
+}
+body[editor-theme="godot"][dimod-style] [class*="action-menu_more-buttons_"] > div > button {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+    transition: opacity 120ms ease-out, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2), background-color 80ms !important;
+}
+body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons_"] > div > button {
+    opacity: 1;
+    transform: none;
+}
+body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons_"] > div:nth-last-child(2) > button { transition-delay: 30ms !important; }
+body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons_"] > div:nth-last-child(3) > button { transition-delay: 60ms !important; }
+body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons_"] > div:nth-last-child(4) > button { transition-delay: 90ms !important; }
+body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons_"] > div:nth-last-child(n+5) > button { transition-delay: 120ms !important; }
+@media (prefers-reduced-motion: reduce) {
+    body[editor-theme="godot"][dimod-style] [class*="action-menu_more-buttons_"] > div > button { transform: none; }
+    body[editor-theme="godot"][dimod-style] [class*="action-menu_expanded_"] [class*="action-menu_more-buttons-outer_"] { animation: none; }
+}

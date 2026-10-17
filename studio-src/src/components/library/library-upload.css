@@ -1,0 +1,497 @@
+@import "../../css/colors.css";
+
+.wizard {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 0.75rem;
+    color: $text-primary;
+    font-size: 0.9375rem;
+}
+[theme="dark"] .wizard {
+    color: white;
+}
+
+.rail {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0 0 0.625rem;
+    padding: 0;
+    list-style: none;
+}
+.rail-step {
+    position: relative;
+    min-width: 0;
+}
+.rail-step + .rail-step::before {
+    content: '';
+    position: absolute;
+    top: 1.0625rem;
+    right: calc(50% + 1.125rem);
+    width: calc(100% - 2rem);
+    height: 2px;
+    background: $ui-black-transparent;
+}
+.is-done + .rail-step::before {
+    background: $motion-primary;
+}
+.rail-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3125rem;
+    width: 100%;
+    padding: 0.25rem 0.125rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: none;
+    color: inherit;
+    opacity: 0.7;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+.rail-button:hover:not(:disabled) {
+    background: $ui-tertiary;
+    opacity: 1;
+}
+.rail-button:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+.rail-dot {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid $ui-black-transparent;
+    border-radius: 50%;
+    background: white;
+    color: $text-primary;
+    font-size: 0.875rem;
+}
+[theme="dark"] .rail-dot {
+    background: $ui-primary;
+    color: white;
+}
+.rail-label {
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.is-current .rail-button {
+    opacity: 1;
+}
+.is-current .rail-dot {
+    border-color: $motion-primary;
+    color: $motion-primary;
+    box-shadow: 0 0 0 4px hsla(247, 74%, 63%, 0.25);
+}
+.is-done .rail-button {
+    opacity: 1;
+}
+.is-done .rail-dot {
+    border-color: $motion-primary;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.card {
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: white;
+}
+[theme="dark"] .card {
+    background: $ui-primary;
+}
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+}
+.heading {
+    margin: 0 0 0.25rem;
+    font-size: 1.3125rem;
+}
+.step-count {
+    display: block;
+    margin-bottom: 0.125rem;
+    font-size: 0.8125rem;
+    color: $motion-primary;
+    color: $accent-text;
+}
+.foot {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid $ui-black-transparent;
+    border-radius: 0 0 0.5rem 0.5rem;
+    background: $ui-secondary;
+}
+.foot-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+.spacer {
+    flex: 1;
+}
+.blocker {
+    font-size: 0.875rem;
+    opacity: 0.75;
+}
+
+.button, .primary, .link {
+    padding: 0.4375rem 0.875rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: white;
+    color: $text-primary;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+}
+.primary {
+    min-width: 7rem;
+    border-color: $motion-primary;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+    text-align: center;
+}
+.button:disabled, .primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.link {
+    border-color: transparent;
+    background: none;
+    color: $motion-primary;
+    color: $accent-text;
+}
+[theme="dark"] .button {
+    background: $ui-secondary;
+    color: white;
+}
+
+.hint {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.75;
+}
+.error {
+    margin: 0;
+    color: #d6334d;
+    font-weight: bold;
+}
+.optional {
+    font-weight: normal;
+    font-size: 0.8125rem;
+    opacity: 0.7;
+}
+
+.label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-weight: bold;
+}
+.label input, .label textarea, .code-box {
+    padding: 0.5rem 0.625rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: white;
+    color: $text-primary;
+    font: inherit;
+    font-weight: normal;
+}
+[theme="dark"] .label input, [theme="dark"] .label textarea, [theme="dark"] .code-box {
+    background: $ui-secondary;
+    color: white;
+}
+.label input:focus, .label textarea:focus, .code-box:focus {
+    outline: none;
+    border-color: $motion-primary;
+    box-shadow: 0 0 0 3px hsla(247, 74%, 63%, 0.25);
+}
+.code-box, .code-preview {
+    font-family: monospace;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    white-space: pre;
+}
+.code-box {
+    resize: vertical;
+}
+.code-preview {
+    max-height: 16rem;
+    margin: 0;
+    padding: 0.5rem 0.625rem;
+    overflow: auto;
+    border-radius: 0.5rem;
+    background: $ui-secondary;
+}
+.check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+.check .hint {
+    display: block;
+}
+
+.choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+.choice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.875rem 1rem;
+    border: 2px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: white;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+}
+[theme="dark"] .choice {
+    background: $ui-secondary;
+}
+.choice:hover {
+    border-color: $motion-primary;
+}
+.choice span {
+    font-size: 0.875rem;
+    opacity: 0.75;
+}
+.choice-selected {
+    border-color: $motion-primary;
+    box-shadow: 0 0 0 4px hsla(247, 74%, 63%, 0.25);
+}
+
+.segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+.segment {
+    padding: 0.375rem 0.875rem;
+    border: 2px solid $ui-black-transparent;
+    border-radius: 1rem;
+    background: white;
+    color: inherit;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+[theme="dark"] .segment {
+    background: $ui-secondary;
+}
+.segment:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.segment-selected {
+    border-color: $motion-primary;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.pick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: 0.5rem;
+    max-height: 20rem;
+    overflow: auto;
+    padding: 2px;
+}
+.pick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border: 2px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: white;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    min-width: 0;
+}
+[theme="dark"] .pick {
+    background: $ui-secondary;
+}
+.pick:hover {
+    border-color: $motion-primary;
+}
+.pick img, .pick-glyph {
+    width: 4.5rem;
+    height: 4.5rem;
+    object-fit: contain;
+}
+.pick-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    opacity: 0.6;
+}
+.pick strong, .pick span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pick span {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+.pick-selected {
+    border-color: $motion-primary;
+    box-shadow: 0 0 0 3px hsla(247, 74%, 63%, 0.25);
+}
+
+.drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1.75rem 1rem;
+    border: 2px dashed $ui-black-transparent;
+    border-radius: 0.5rem;
+    text-align: center;
+    cursor: pointer;
+}
+.drop:hover, .drop-active {
+    border-color: $motion-primary;
+    background: $ui-tertiary;
+}
+.drop span {
+    font-size: 0.875rem;
+    opacity: 0.75;
+}
+
+.preview, .centre-frame {
+    background: conic-gradient(#e9e9ef 25%, white 0 50%, #e9e9ef 0 75%, white 0) 0 0 / 16px 16px;
+}
+.preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.75rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+}
+.preview img {
+    max-width: 100%;
+    max-height: 12rem;
+}
+.preview audio {
+    width: 100%;
+    max-width: 24rem;
+}
+
+.centre {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-weight: normal;
+}
+.centre-frame {
+    position: relative;
+    align-self: flex-start;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    cursor: crosshair;
+    line-height: 0;
+}
+.centre-frame img {
+    max-width: 100%;
+    max-height: 14rem;
+}
+.centre-mark {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid $motion-primary;
+    border-radius: 50%;
+    background: hsla(0, 0%, 100%, 0.6);
+    pointer-events: none;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+.chip {
+    padding: 0.125rem 0.625rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 1rem;
+    background: white;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+[theme="dark"] .chip {
+    background: $ui-secondary;
+}
+.chip-on {
+    border-color: $motion-primary;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.review {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+.review-thumb {
+    width: 8rem;
+    max-height: 8rem;
+    object-fit: contain;
+}
+.review-list {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.375rem 1rem;
+    margin: 0;
+    grid-column: -2;
+}
+.review-list dt {
+    opacity: 0.7;
+}
+.review-list dd {
+    margin: 0;
+    font-weight: bold;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.progress {
+    height: 6px;
+    margin-bottom: 0.5rem;
+    border-radius: 3px;
+    background: $ui-black-transparent;
+    overflow: hidden;
+}
+.progress span {
+    display: block;
+    height: 100%;
+    background: $motion-primary;
+}

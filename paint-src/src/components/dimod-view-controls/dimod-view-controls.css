@@ -1,0 +1,364 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.controls {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: calc(2 * $grid-unit);
+    margin-left: calc(2 * $grid-unit);
+    flex-wrap: wrap;
+    row-gap: $grid-unit;
+}
+
+.group {
+    display: flex;
+    gap: $grid-unit;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: calc(1.95rem + 2px);
+    min-width: calc(1.95rem + 2px);
+    padding: 0 .35rem;
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    color: $text-primary;
+    cursor: pointer;
+    font-size: .75rem;
+    font-weight: bold;
+    transition: .2s;
+}
+
+.caret {
+    min-width: .75rem;
+    width: .75rem;
+    padding: 0;
+    margin-left: -.3rem;
+}
+
+.caret-arrow {
+    width: 0;
+    height: 0;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: .7;
+}
+
+.button:hover {
+    background: $motion-light-transparent;
+}
+
+.active,
+.active:hover {
+    background: $motion-primary;
+}
+
+.active .icon {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+
+.icon {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+[theme="dark"] .icon {
+    filter: var(--dimod-dark-icon-filter, brightness(1.7));
+}
+
+[theme="dark"] .active .icon {
+    filter: var(--dimod-on-accent-filter, brightness(0) invert(1));
+}
+
+.zoom {
+    min-width: 3.75rem;
+}
+
+.menu {
+    position: absolute;
+    bottom: calc(100% + .375rem);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: $grid-unit;
+    padding: calc(2 * $grid-unit);
+    border: 1px solid $ui-pane-border;
+    border-radius: .375rem;
+    background: white;
+    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
+    min-width: 11rem;
+}
+
+[theme="dark"] .menu {
+    background: rgb(30, 30, 30);
+}
+
+.menu-zoom {
+    right: 0;
+}
+
+.menu-grid {
+    left: 0;
+    bottom: calc(100% + 22px);
+    min-width: 0;
+    padding: 4px 6px;
+    gap: .25em;
+    border-radius: .5rem;
+    border-color: var(--paint-ui-pane-border, #ddd);
+    background: var(--ui-primary, white);
+    box-shadow: 0 0 8px 1px rgba(0, 0, 0, .3);
+    animation: menu-grid-rise 500ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[theme="dark"] .menu-grid {
+    background: var(--ui-primary, rgb(30, 30, 30));
+}
+
+.menu-grid::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: calc(.975rem + 1px - 7px);
+    border: 7px solid transparent;
+    border-top-color: var(--ui-primary, white);
+    filter: drop-shadow(0 1px 0 var(--paint-ui-pane-border, #ddd));
+}
+
+@keyframes menu-grid-rise {
+    from {
+        bottom: 100%;
+        opacity: 0;
+    }
+}
+
+.menu-grid-line {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: .5em;
+    font-size: .75rem;
+    color: $text-primary;
+    white-space: nowrap;
+}
+
+.menu-grid .presets {
+    flex-wrap: nowrap;
+}
+
+.input {
+    height: 1.5rem;
+    border: 1px solid $ui-pane-border;
+    border-radius: 2rem;
+    padding: 0 .75rem;
+    font-size: .8125rem;
+    color: $text-primary;
+    background: transparent;
+}
+
+.item {
+    text-align: left;
+    border: none;
+    background: transparent;
+    padding: .3rem .4rem;
+    border-radius: .5rem;
+    color: $text-primary;
+    font-size: .75rem;
+    cursor: pointer;
+}
+
+.item:hover {
+    background: $motion-light-transparent;
+}
+
+.presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $grid-unit;
+}
+
+.chip {
+    border: none;
+    border-radius: .5rem;
+    background: transparent;
+    padding: .15rem .5rem;
+    font-size: .6875rem;
+    color: $text-primary;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.chip:hover {
+    background: $motion-light-transparent;
+}
+
+.chip-active,
+.chip-active:hover {
+    background: $motion-primary;
+    border-color: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.text-button {
+    padding: 0 .6rem;
+    font-weight: bold;
+    border: none;
+    border-radius: .5rem;
+    transition: .2s;
+}
+
+.active.text-button {
+    color: var(--dimod-on-accent, white);
+}
+
+.menu-tilt {
+    align-items: center;
+    padding: 8px;
+}
+
+.menu-tilt::after {
+    left: calc(50% - 7px);
+}
+
+.tilt-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.tilt-wheel {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    border: 2px solid $ui-pane-border;
+    border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.tilt-wheel:active {
+    cursor: grabbing;
+}
+
+.tilt-tick {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.tilt-tick::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: calc(50% - 1px);
+    width: 2px;
+    height: 6px;
+    background: $ui-pane-border;
+}
+
+.tilt-hand {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.tilt-hand::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: calc(50% - 1.5px);
+    width: 3px;
+    height: calc(50% - 6px);
+    border-radius: 2px;
+    background: $motion-primary;
+}
+
+.tilt-hand::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: calc(50% - 5px);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: $motion-primary;
+}
+
+.tilt-value {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    text-align: center;
+    font-size: .75rem;
+    color: $text-primary;
+    pointer-events: none;
+}
+
+.tilt-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.tilt-icon {
+    transition: transform .1s;
+}
+
+.tilt-anchor {
+    gap: 4px;
+    position: relative;
+    display: flex;
+}
+
+.menu-grid.menu-tilt {
+    left: -48px;
+}
+
+.menu-grid.menu-tilt::after {
+    left: calc(48px + 1rem + 1px - 7px);
+}
+
+.tilt-anchor > .button {
+    position: relative;
+}
+
+.tilt-badge {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    text-align: center;
+    font-size: .625rem;
+    font-weight: bold;
+    line-height: 1;
+    color: white;
+    pointer-events: none;
+    text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+}
+
+.button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.menu-grid.menu-zoom {
+    left: auto;
+    right: 0;
+    min-width: 11rem;
+}
+
+.menu-grid.menu-zoom::after {
+    left: auto;
+    right: calc(.975rem + 1px - 7px);
+}
+
+.text-button:hover {
+    background: $motion-light-transparent;
+}

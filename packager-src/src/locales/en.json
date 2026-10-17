@@ -1,0 +1,623 @@
+{
+  "p4": {
+    "description1": {
+      "string": "Converts PenguinMod projects into HTML files, zip archives, or executable programs for Windows, macOS, and Linux."
+    },
+    "description2": {
+      "string": "If you just want an easy way to embed a project into your website, you may be interested in {embedding}."
+    },
+    "description2-embedding": {
+      "string": "Embedding"
+    },
+    "description3": {
+      "string": "Report bugs, give feedback, and suggest ideas {onScratch} or {onGitHub}."
+    },
+    "disclaimer": {
+      "string": "This site is not affiliated with Scratch, the Scratch Team, or the Scratch Foundation."
+    },
+    "description3-on": {
+      "string": "on {brand}",
+      "context": "Used in the context 'Report bugs on Scratch'."
+    },
+    "error": {
+      "string": "Error"
+    },
+    "errorMessage": {
+      "string": "Message: {error}"
+    },
+    "networkError": {
+      "string": "Couldn't download {url}. Make sure you're connected to the internet and try disabling any browser extensions.",
+      "context": "Error displayed when an attempt to download a file failed for an unknown reason."
+    },
+    "outdated": {
+      "string": "This version of the packager appears to be outdated. Please refresh and try again.",
+      "context": "Error displayed when the packager detects that you are using an old version and that you must refresh to continue."
+    },
+    "cannotAccessProject": {
+      "string": "Can't access the project. This usually means the project doesn't exist, the ID is invalid, the project was deleted, or your network is blocking projects.penguinmod.com.",
+      "context": "Part of the error modal when loading an inaccessible project."
+    },
+    "cannotAccessProjectCaching": {
+      "string": "If the project was shared recently, it may take a few minutes for this message to go away.",
+      "context": "Part of the error modal when loading an unshared project."
+    },
+    "close": {
+      "string": "Close"
+    },
+    "refresh": {
+      "string": "Refresh",
+      "context": "Button in some error messages that refreshes/reloads the page"
+    },
+    "browserNotSupported": {
+      "string": "Browser not supported",
+      "description": "Message that appears when the user's browser does not support required features."
+    },
+    "browserNotSupportedDescription": {
+      "string": "Please update your browser.",
+      "description": "Additional text that appears when the user's browser does not support required features."
+    },
+    "importingInterface": {
+      "string": "Loading options...",
+      "description": "Can appear when downloading additional UI scripts. Typically never seen."
+    },
+    "unknownImportError": {
+      "string": "Something went wrong. Please refresh and try again.",
+      "description": "Appears when an unknown error happens while downloading additional UI scripts."
+    },
+    "reportBug": {
+      "string": "Report Bug"
+    },
+    "privacy": {
+      "string": "Privacy Policy"
+    },
+    "feedback": {
+      "string": "Feedback"
+    },
+    "sourceCode": {
+      "string": "Source Code"
+    },
+    "donate": {
+      "string": "Donate",
+      "context": "Link to donation page"
+    },
+    "documentation": {
+      "string": "Additional resources and help",
+      "context": "Link to a place with additional information describing advanced topics"
+    }
+  },
+  "progress": {
+    "loadingAssets": {
+      "string": "Downloading assets ({complete}/{total})"
+    },
+    "compressingProject": {
+      "string": "Compressing project"
+    },
+    "loadingProjectMetadata": {
+      "string": "Downloading project metadata"
+    },
+    "loadingProjectData": {
+      "string": "Downloading project data"
+    },
+    "packagingProject": {
+      "string": "Packaging project"
+    },
+    "loadingLargeAsset": {
+      "string": "Downloading {thing}",
+      "context": "Generic loading message used when loading a 'brand name' file such as NW.js or Electron."
+    },
+    "loadingScripts": {
+      "string": "Downloading scripts",
+      "context": "Loading message used when loading the Scratch runtime"
+    },
+    "downloadingExtensions": {
+      "string": "Downloading custom extensions",
+      "context": "Loading message that appears while downloading custom extensions"
+    }
+  },
+  "select": {
+    "select": {
+      "string": "Select Project"
+    },
+    "selectHelp": {
+      "string": "Select the project you want to package by copying and pasting the PenguinMod project link or using one of the other modes. If you use a project you didn't make, make sure to credit the creator."
+    },
+    "id": {
+      "string": "PenguinMod Project ID or URL",
+      "context": "Radio option to select a project from the PenguinMod website"
+    },
+    "file": {
+      "string": "File",
+      "context": "Radio option to upload a project from file"
+    },
+    "url": {
+      "string": "Other URL",
+      "context": "Radio option to choose a project from a non-PenguinMod URL"
+    },
+    "loadProject": {
+      "string": "Load Project",
+      "context": "Button to load a project"
+    },
+    "loadToContinue": {
+      "string": "Load a project to continue"
+    },
+    "invalidId": {
+      "string": "Invalid project ID",
+      "context": "Error message"
+    },
+    "invalidUrl": {
+      "string": "Invalid URL",
+      "context": "Error message"
+    },
+    "noFileSelected": {
+      "string": "No file selected",
+      "context": "Error message"
+    },
+    "unsharedProjects": {
+      "string": "Unshared projects are not accessible using their project ID as they do not have one.",
+      "context": "Warning message about unshared projects no longer being accessible."
+    },
+    "unsharedProjectsWorkaround": {
+      "string": "Instead, you can either share the project or save the project to your computer (File > Save to your computer) and load the file in the packager. Files generated by the packager are fully self contained and not affected by these changes.",
+      "context": "Suggested alternatives to continue accessing unshared projects."
+    },
+    "unsharedProjectsMore": {
+      "string": "For more information and workarounds, visit: {link}",
+      "context": "Link to learn more about the state of unshared projects."
+    }
+  },
+  "options": {
+    "learnMore": {
+      "string": "Learn more",
+      "context": "Hover text for '(?)' link to learn more about an option"
+    },
+    "runtimeOptions": {
+      "string": "Runtime Options"
+    },
+    "storedWarning": {
+      "string": "Note: This project has settings stored in it, which may override these settings."
+    },
+    "turbo": {
+      "string": "Turbo Mode"
+    },
+    "framerate": {
+      "string": "Framerate"
+    },
+    "interpolation": {
+      "string": "Interpolation"
+    },
+    "highQualityPen": {
+      "string": "High Quality Pen"
+    },
+    "infiniteClones": {
+      "string": "Infinite Clones"
+    },
+    "removeFencing": {
+      "string": "Remove Fencing"
+    },
+    "removeMiscLimits": {
+      "string": "Remove Miscellaneous Limits"
+    },
+    "stage": {
+      "string": "Stage",
+      "context": "Header of option group related to the stage, its size, etc."
+    },
+    "stageSize": {
+      "string": "Custom Stage Size",
+      "context": "Custom stage size option"
+    },
+    "preserveRatio": {
+      "string": "Preserve aspect ratio when resized (recommended)"
+    },
+    "stretch": {
+      "string": "Stretch stage to fill screen without changing actual size (experimental)"
+    },
+    "dynamicResize": {
+      "string": "Dynamically resize size to match window size (experimental)"
+    },
+    "username": {
+      "string": "Username (each \"#\" gets replaced with a random number)"
+    },
+    "customUsernameWarning": {
+      "string": "Be careful when changing the default username as it can cause connections to the default cloud variable server to be blocked. Only the default username is guaranteed to work.",
+      "context": "Warning that appears when using custom username and cloud variables at the same time."
+    },
+    "closeWhenStopped": {
+      "string": "Close window when project stops",
+      "context": "Option to close the window containing the packaged project when all the scripts within a project have stopped running."
+    },
+    "autoplay": {
+      "string": "Start project automatically instead of showing a big blue flag"
+    },
+    "autoplayHint": {
+      "string": "Note: Many browsers will not allow websites to automatically play sound, so sounds might not play until the user interacts with the project."
+    },
+    "playerOptions": {
+      "string": "Player Options",
+      "context": "Player options section header"
+    },
+    "pageTitle": {
+      "string": "Page title"
+    },
+    "loadingScreen": {
+      "string": "Loading Screen",
+      "context": "Header of loading screen settings section"
+    },
+    "showProgressBar": {
+      "string": "Show progress bar"
+    },
+    "loadingScreenText": {
+      "string": "Loading screen text"
+    },
+    "loadingScreenImage": {
+      "string": "Loading screen image"
+    },
+    "sizeNormal": {
+      "string": "Display at normal size"
+    },
+    "sizeStretch": {
+      "string": "Fill screen"
+    },
+    "loadingScreenTextPlaceholder": {
+      "string": "(Nothing)",
+      "context": "Placeholder text for the 'Loading Screen Text' option"
+    },
+    "icon": {
+      "string": "Page icon"
+    },
+    "controls": {
+      "string": "Controls",
+      "context": "Controls section header"
+    },
+    "showFlag": {
+      "string": "Show blue flag button in controls"
+    },
+    "showStop": {
+      "string": "Show stop sign button in controls"
+    },
+    "showFullscreen": {
+      "string": "Show fullscreen button in controls"
+    },
+    "showPause": {
+      "string": "Show pause button in controls"
+    },
+    "accentColor": {
+      "string": "Accent color (active/hovered controls, ask prompt, context menus)"
+    },
+    "controlsHelp": {
+      "string": "If all controls are disabled, the controls bar is removed entirely. If only fullscreen is enabled, it will always be located in the top left corner, not in the controls header."
+    },
+    "colors": {
+      "string": "Colors",
+      "context": "Colors section header"
+    },
+    "backgroundColor": {
+      "string": "Background color"
+    },
+    "foregroundColor": {
+      "string": "Foreground color (progress bar, some icons, some text)"
+    },
+    "monitors": {
+      "string": "Monitors",
+      "context": "Monitors refers to variable and list monitors/watchers/displays that display on the stage"
+    },
+    "editableLists": {
+      "string": "Editable lists"
+    },
+    "variableColor": {
+      "string": "Variable color",
+      "context": "Name of option that controls the color of variable monitors that appear over the stage"
+    },
+    "listColor": {
+      "string": "List color",
+      "context": "Name of option that controls background color of rows in list monitors that appear over the stage"
+    },
+    "interaction": {
+      "string": "Input",
+      "context": "Input settings header"
+    },
+    "normalCursor": {
+      "string": "Normal cursor"
+    },
+    "noCursor": {
+      "string": "No cursor"
+    },
+    "customCursor": {
+      "string": "Custom cursor"
+    },
+    "cursorCenter": {
+      "string": "Cursor center:",
+      "context": "Option to configure the center of a custom cursor. Followed by 'X: (input) Y: (input)'"
+    },
+    "automaticallyCenter": {
+      "string": "Automatically center",
+      "context": "Button that automatically centers a custom cursor"
+    },
+    "cursorHelp": {
+      "string": "Images up to 32x32 work best. Larger images may not work reliably."
+    },
+    "pointerlock": {
+      "string": "Lock mouse cursor",
+      "context": "Option to enable pointerlock"
+    },
+    "pointerlockHelp": {
+      "string": "Based on a TurboWarp Experiment."
+    },
+    "gamepad": {
+      "string": "Support USB or Bluetooth gamepads/controllers"
+    },
+    "gamepadHelp": {
+      "string": "Based on the \"Gamepad support\" addon."
+    },
+    "cloudVariables": {
+      "string": "Cloud Variables",
+      "context": "Cloud variables section header"
+    },
+    "noCloudVariables": {
+      "string": "This project does not contain cloud variables.",
+      "context": "Message that appears when the project contain no cloud variables."
+    },
+    "mode": {
+      "string": "Mode",
+      "context": "Label to choose how to handle cloud variables"
+    },
+    "cloudVariablesHost": {
+      "string": "Cloud host",
+      "context": "Option to use configure which cloud variable server to connect to"
+    },
+    "cloudVariables-ws": {
+      "string": "Connect to cloud variable server"
+    },
+    "cloudVariables-ws-help": {
+      "string": "\"Connect to cloud variable server\" syncs variables with other users."
+    },
+    "cloudVariables-local": {
+      "string": "Store in local storage"
+    },
+    "cloudVariables-local-help": {
+      "string": "\"Store in local storage\" stores variables on each user's computer and restores them when the project is opened. If a user has multiple windows/tabs of the project open, changes will sync between those windows."
+    },
+    "cloudVariables-ignore": {
+      "string": "Ignore"
+    },
+    "cloudVariables-ignore-help": {
+      "string": "\"Ignore\" treats cloud variables like normal variables."
+    },
+    "cloudVariables-custom": {
+      "string": "Advanced"
+    },
+    "cloudVariables-custom-help": {
+      "string": "\"Advanced\" uses a different mode for each variable, so some variables can sync with other users but others can be stored locally, for example."
+    },
+    "advancedOptions": {
+      "string": "Advanced Options"
+    },
+    "advancedSummary": {
+      "string": "You probably don't want to change these. (Click to open)",
+      "context": "Text that can be clicked to expand the advanced options section."
+    },
+    "specialCloudBehaviors": {
+      "string": "Special cloud variable behaviors like HTMLifier",
+      "context": "Do not translate 'HTMLifier'"
+    },
+    "unsafeCloudBehaviors": {
+      "string": "Additional unsafe special cloud behaviors"
+    },
+    "unsafeCloudBehaviorsWarning": {
+      "string": "Unsafe cloud behaviors allows the packaged project to execute arbitrary code outside of the \"sandbox\" that projects are typically executed in. Depending on the environment you're packaging for, this grants projects full control over your computer, including the ability to install viruses. If you do not trust the project you're packaging, please turn off this option.",
+      "context": "Warning that appears when unsafe cloud behaviors is enabled."
+    },
+    "implicitCloudHint": {
+      "string": "Tip: Any variable with a name starting with \"{cloud}\" will be converted to a cloud variable regardless of whether it was marked as one."
+    },
+    "enableCompiler": {
+      "string": "Enable Compiler"
+    },
+    "warpTimer": {
+      "string": "Warp Timer"
+    },
+    "projectId": {
+      "string": "Project ID"
+    },
+    "projectIdHelp": {
+      "string": "Project ID is used when connecting to a cloud variable server and storing local cloud variables. It can contain more than just numbers."
+    },
+    "packagedRuntime": {
+      "string": "Remove raw asset data after loading to save RAM",
+      "context": "An option in advanced options. RAM refers to computer memory."
+    },
+    "customExtensions": {
+      "string": "Custom extensions (one URL per line)"
+    },
+    "customExtensionsSecurity": {
+      "string": "Custom extensions are always run unsandboxed in the packager. Depending on the environment you're packaging for, this grants extensions full control over your computer, including the ability to install viruses. Don't use extensions you don't trust."
+    },
+    "bakeExtensions": {
+      "string": "Try to embed cached copy of custom extensions instead of downloading them each time the project is run",
+      "context": "Option that tries to store "
+    },
+    "customCSS": {
+      "string": "Custom CSS (Don't change if you don't know what you're doing!)",
+      "context": "Do not translate 'CSS'"
+    },
+    "customJS": {
+      "string": "Custom JS (Don't change if you don't know what you're doing!)",
+      "context": "Do not translate 'JS'"
+    },
+    "environment": {
+      "string": "Environment",
+      "context": "Label to select which environment to package the project for"
+    },
+    "html": {
+      "string": "Plain HTML (standalone, works anywhere)"
+    },
+    "zip": {
+      "string": "Zip (ideal for websites)"
+    },
+    "zip-one-asset": {
+      "string": "Zip, combine assets into single file (not recommended)"
+    },
+    "application-win32": {
+      "string": "{type} Windows application (32-bit or 64-bit)",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'Windows'."
+    },
+    "application-win64": {
+      "string": "{type} Windows application (64-bit only, not recommended)",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'Windows'."
+    },
+    "application-win-arm": {
+      "string": "{type} Windows application for ARM",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'Windows' or 'ARM'."
+    },
+    "application-mac": {
+      "string": "{type} macOS application",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'macOS'."
+    },
+    "application-linux64": {
+      "string": "{type} Linux application (64-bit only)",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'Linux'."
+    },
+    "application-linux-arm32": {
+      "string": "{type} Linux application for ARM (32-bit)",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'Linux' or 'ARM'."
+    },
+    "application-linux-arm64": {
+      "string": "{type} Linux application for ARM (64-bit)",
+      "context": "type will become something like 'NW.js' or 'Electron'. Do not translate 'Linux' or 'ARM'."
+    },
+    "otherEnvironments": {
+      "string": "Other environments (Click to open)",
+      "context": "Text that can be clicked to expand list of environments to include some unrecommended ones."
+    },
+    "otherEnvironmentsHelp": {
+      "string": "Most new projects should use the options listed above instead.",
+      "context": "Text describing the 'Other environments' section."
+    },
+    "applicationSettings": {
+      "string": "Application Settings"
+    },
+    "packageName": {
+      "string": "Package name"
+    },
+    "packageNameHelp": {
+      "string": "Package name should be a unique name used only by your application. The same project should always have the same package name."
+    },
+    "version": {
+      "string": "Version",
+      "context": "Label for application version number input"
+    },
+    "versionHelp": {
+      "string": "Updating the version is completely optional and doesn't affect your project's behavior. It may appear in places like about screens depending on the environment.",
+      "context": "Additional information about the version number option"
+    },
+    "startWindow": {
+      "string": "Start as window"
+    },
+    "startMaximized": {
+      "string": "Start as maximized window"
+    },
+    "startFullscreen": {
+      "string": "Start in fullscreen"
+    },
+    "maxTextureDimension": {
+      "string": "Increase max vector costume resolution to make large costumes look better. May increase memory use and cause crashes."
+    },
+    "package": {
+      "string": "Package",
+      "context": "Button to package the project"
+    },
+    "preview": {
+      "string": "Preview",
+      "context": "Button to preview the project"
+    },
+    "resetAll": {
+      "string": "Reset All Settings",
+      "developer_comment": "Button that resets all settings"
+    },
+    "export": {
+      "string": "Export Settings",
+      "developer_comment": "Button to export packager settings"
+    },
+    "import": {
+      "string": "Import Settings",
+      "developer_comment": "Button to import packager settings"
+    },
+    "confirmImportUnsafe": {
+      "string": "These settings use advanced features such as custom JS that run unknown and possibly malicious code on your computer. Only import this file if you trust the person who created it. If you're not sure what this means, you probably shouldn't import these settings.",
+      "developer_comment": "Confirmation prompt that appears when importing packager settings that use 'unsafe' features."
+    },
+    "downloadsWillAppearHere": {
+      "string": "Downloads will appear here",
+      "context": "Placeholder that appears when no project has been packaged yet so there is nothing to download"
+    }
+  },
+  "downloads": {
+    "link": {
+      "string": "Download {filename} ({size})",
+      "context": "Link to download project after it has been packaged. filename might be \"Packaged Project.html\" and size might be \"6.2MB\""
+    },
+    "useWorkaround": {
+      "string": "Click here if download link doesn't work",
+      "context": "Buttons that appears when downloading certain file types on certain systems to work around system bugs that prevent downloading files."
+    }
+  },
+  "fileInput": {
+    "select": {
+      "string": "Select or drop file"
+    },
+    "clear": {
+      "string": "Clear Selection",
+      "context": "Button to unselect a file"
+    },
+    "selected": {
+      "string": "Selected {file}",
+      "context": "Message indicating the name of the selected file"
+    }
+  },
+  "theme": {
+    "system": {
+      "string": "Use system theme",
+      "context": "Option to choose dark/light mode based on whatever the global system theme is"
+    },
+    "dark": {
+      "string": "Dark",
+      "context": "Dark mode option"
+    },
+    "light": {
+      "string": "Light",
+      "context": "Light mode option"
+    }
+  },
+  "reset": {
+    "reset": {
+      "string": "Reset",
+      "context": "Hover text of button to reset settings within a section"
+    },
+    "confirm": {
+      "string": "Are you sure you want to reset these settings? This cannot be undone.",
+      "context": "Prompt to confirm user wants to reset a specific subsection's settings"
+    },
+    "confirmAll": {
+      "string": "Are you sure you want to reset ALL settings? This cannot be undone.",
+      "context": "Prompt to confirm user wants to reset ALL settings for the current project"
+    }
+  },
+  "preview": {
+    "loading": {
+      "string": "Loading Preview"
+    }
+  },
+  "import": {
+    "header": {
+      "string": "Importing project...",
+      "description": "Header that appears when importing a project from an external site"
+    },
+    "description": {
+      "string": "This may take a while if the project is large.",
+      "description": "Appears when importing a project from an external site"
+    },
+    "cancel": {
+      "string": "Cancel",
+      "description": "Button to cancel import"
+    }
+  }
+}

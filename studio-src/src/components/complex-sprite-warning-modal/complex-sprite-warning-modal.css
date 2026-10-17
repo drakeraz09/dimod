@@ -1,0 +1,80 @@
+@import "../../css/colors.css";
+
+.modal-content {
+    width: 480px;
+    margin-top: 25px;
+}
+
+.body {
+    background: $ui-white;
+    padding: 1rem 1.5rem;
+}
+[theme="dark"] .body {
+    color: $text-primary;
+    background: $ui-primary;
+}
+
+.warning-box {
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    background-color: rgba(255, 81, 81, 0.25);
+    border: 1px solid red;
+    margin-bottom: 1rem;
+}
+[theme="dark"] .warning-box {
+    background-color: rgba(255, 81, 81, 0.15);
+    border-color: #ff5c5c;
+}
+
+.button-row {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dont-show-again {
+    display: flex;
+    align-items: center;
+    font-weight: normal;
+    font-size: 0.85rem;
+}
+
+.dont-show-again input {
+    margin-right: 0.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+.leave-button,
+.proceed-button {
+    font: inherit;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid $ui-black-transparent;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.leave-button {
+    background-color: transparent;
+    color: $text-primary;
+    margin-right: 0.5rem;
+}
+.leave-button:hover {
+    background-color: rgba(255, 92, 92, 0.15);
+    border-color: rgb(255, 92, 92);
+}
+
+.proceed-button {
+    color: var(--dimod-on-accent, white);
+    background-color: $motion-primary;
+}
+.proceed-button:hover {
+    background-color: $extensions-primary;
+    box-shadow: 0 0 0 6px $motion-transparent;
+}

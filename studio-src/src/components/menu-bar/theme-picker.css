@@ -1,0 +1,156 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+$item: 2.625rem;
+
+.picker {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 2.25rem;
+    padding: 0 0.5rem;
+    background: none;
+    border: none;
+    border-radius: $space;
+    color: inherit;
+    cursor: pointer;
+}
+
+.button:hover,
+.open .button {
+    background: hsla(0, 0%, 0%, 0.15);
+}
+
+.flyout {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    z-index: 600;
+    padding-top: 0.25rem;
+    transform: translateX(-50%);
+}
+
+.picker:hover .flyout,
+.open .flyout {
+    display: block;
+}
+
+.picker:hover .pill,
+.open .pill {
+    animation: pill-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+.picker:hover .item,
+.open .item {
+    animation: item-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.picker:hover .item:nth-child(2), .open .item:nth-child(2) { animation-delay: 25ms; }
+.picker:hover .item:nth-child(3), .open .item:nth-child(3) { animation-delay: 50ms; }
+.picker:hover .item:nth-child(4), .open .item:nth-child(4) { animation-delay: 75ms; }
+.picker:hover .item:nth-child(n+5), .open .item:nth-child(n+5) { animation-delay: 100ms; }
+
+@keyframes pill-in {
+    from {
+        clip-path: inset(0 0 100% 0 round 1rem);
+    }
+    to {
+        clip-path: inset(0 0 0 0 round 1rem);
+    }
+}
+
+@keyframes item-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.8);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .picker:hover .pill, .open .pill, .picker:hover .item, .open .item { animation: none; }
+}
+
+@keyframes flyout-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+    }
+}
+
+.pill {
+    display: flex;
+    background: $motion-primary;
+    border-radius: $item;
+    box-shadow: 0 0 0 4px $motion-transparent;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+}
+
+.column + .column {
+    border-left: 1px solid hsla(0, 0%, 100%, 0.25);
+}
+
+.gap {
+    height: 1px;
+    margin: 3px 8px;
+    background: currentColor;
+    opacity: 0.3;
+    color: var(--dimod-on-accent, $ui-white);
+}
+
+.item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: $item;
+    height: $item;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 100%;
+    color: var(--dimod-on-accent, $ui-white);
+    cursor: pointer;
+}
+
+.item:hover {
+    background: hsla(0, 0%, 100%, 0.2);
+}
+
+.active {
+    box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.number {
+    font-size: 1.125rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.flyout .tip {
+    position: absolute;
+    left: calc(100% + 0.625rem);
+    z-index: 2;
+    margin-top: 0.25rem;
+    padding: 0.3rem 0.625rem;
+    border-radius: $space;
+    background: $extensions-primary;
+    color: var(--dimod-on-accent, $ui-white);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateY(-50%);
+    box-shadow: 0 4px 12px hsla(0, 0%, 0%, 0.25);
+}

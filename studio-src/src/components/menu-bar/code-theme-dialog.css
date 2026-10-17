@@ -1,0 +1,65 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+.modal-content {
+    width: min(56rem, 94vw);
+    max-width: none;
+}
+
+.body {
+    display: flex;
+    height: min(30rem, calc(100vh - 12rem));
+    background: $ui-white;
+    color: $text-primary;
+}
+
+[theme="dark"] .body {
+    background: $ui-secondary;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: none;
+    width: 15rem;
+    padding: 0.5rem;
+    overflow-y: auto;
+    border-right: 1px solid $ui-black-transparent;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    flex: none;
+    padding: 0.375rem 0.625rem;
+    background: none;
+    border: none;
+    border-radius: $space;
+    color: $text-primary;
+    font: inherit;
+    font-size: 0.875rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.row:hover {
+    background: $ui-black-transparent;
+}
+
+.row-active,
+.row-active:hover {
+    background: $motion-primary;
+    color: var(--dimod-on-accent, $ui-white);
+    font-weight: bold;
+}
+
+.name {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview {
+    flex: 1;
+    min-width: 0;
+}

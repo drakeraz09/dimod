@@ -1,0 +1,439 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+.server-tab {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.workspace-area {
+    flex-grow: 1;
+    position: relative;
+    min-height: 0;
+}
+
+.blocks {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+.blocks :global(.injectionDiv) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border: 1px solid $ui-black-transparent;
+    border-top-right-radius: $space;
+    border-bottom-right-radius: $space;
+}
+
+.blocks :global(.blocklyMainBackground) {
+    stroke: none;
+}
+
+.blocks :global(.blocklyToolboxDiv) {
+    border-right: 1px solid $ui-black-transparent;
+    border-bottom: 1px solid $ui-black-transparent;
+    box-sizing: content-box;
+    height: 100% !important;
+    overflow-x: hidden;
+    -ms-overflow-style: none;
+}
+
+.blocks :global(.blocklyToolboxDiv::-webkit-scrollbar) {
+    display: none;
+}
+
+.blocks :global(.blocklyFlyout) {
+    border-right: 1px solid $ui-black-transparent;
+    box-sizing: content-box;
+}
+
+.blocks :global(.blocklyBlockDragSurface) {
+    pointer-events: none;
+    z-index: $z-index-drag-layer;
+}
+
+.blocks :global(.scratchCategoryMenuItemLabel) {
+    font-size: 0.65rem;
+}
+
+.code-view {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    background: $ui-white;
+    z-index: 1;
+}
+
+[theme="dark"] .code-view {
+    background: $ui-secondary;
+}
+
+.dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: $ui-black-transparent;
+}
+
+.dot-on {
+    background: $pen-primary;
+}
+
+.error-badge {
+    min-width: 1rem;
+    padding: 0 0.3rem;
+    border-radius: 0.5rem;
+    background: $error-primary;
+    color: $ui-white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    line-height: 1rem;
+}
+
+.log-line {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0;
+    line-height: 1.4;
+}
+
+.log-line.system {
+    opacity: 0.6;
+}
+
+.log-line.warn {
+    color: $data-primary;
+}
+
+.log-line.error {
+    color: $error-primary;
+}
+
+.log-time {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.live-tag {
+    flex-shrink: 0;
+    padding: 0 0.25rem;
+    border-radius: 0.2rem;
+    background: $pen-transparent;
+    color: $pen-primary;
+}
+
+.room-tag {
+    flex-shrink: 0;
+    max-width: 8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 0.25rem;
+    border-radius: 0.2rem;
+    background: $motion-transparent;
+    color: $motion-primary;
+}
+
+.log-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.code-view-hidden {
+    display: none;
+}
+
+.editor {
+    flex-grow: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.typing-indicator {
+    font-weight: normal;
+    color: $text-primary-transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.locked-wrapper {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border: 1px solid $ui-black-transparent;
+    border-top-right-radius: $space;
+    border-bottom-right-radius: $space;
+    background: $ui-white;
+}
+
+[theme="dark"] .locked-wrapper {
+    background: $ui-secondary;
+}
+
+.locked-card {
+    max-width: 26rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    color: $text-primary;
+}
+
+.locked-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.locked-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.locked-cost {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.locked-balance {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0.75;
+}
+
+.locked-button {
+    align-self: flex-start;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: $space;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, $ui-white);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.locked-button:hover {
+    background: $motion-tertiary;
+}
+
+.locked-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.publish-error {
+    padding: 0.25rem 0.5rem;
+    border-radius: $space;
+    background: $ui-white;
+    color: $error-primary;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+[theme="dark"] .publish-error {
+    background: $ui-secondary;
+}
+
+.server-tab .log-pane-closed {
+    flex: 0 0 auto;
+    padding-bottom: 0;
+}
+
+.server-tab .log-pane-tall {
+    flex-basis: 15rem;
+}
+
+.log-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.log-header .dot {
+    margin-right: 0.15rem;
+}
+
+.db-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    font-size: 0.75rem;
+}
+
+.db-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.1rem 0 0.3rem;
+    flex-wrap: wrap;
+}
+
+.db-search {
+    flex: 1;
+    min-width: 6rem;
+    font: inherit;
+    padding: 0.2rem 0.45rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+    background: $ui-white;
+    color: $text-primary;
+}
+
+.db-usage {
+    opacity: 0.7;
+}
+
+.db-error {
+    color: $error-primary;
+    padding: 0 0 0.25rem;
+}
+
+.db-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.db-row {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.2rem 0;
+    border: none;
+    border-bottom: 1px solid $ui-black-transparent;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+}
+
+.db-row:hover {
+    background: $ui-black-transparent;
+}
+
+.db-key {
+    font-weight: bold;
+    flex-shrink: 0;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.db-preview {
+    flex: 1;
+    min-width: 0;
+    opacity: 0.7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.db-bytes {
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+.db-more {
+    margin: 0.3rem 0;
+    padding: 0.2rem 0.6rem;
+    font: inherit;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.db-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-height: 0;
+}
+
+.db-value {
+    flex: 1;
+    min-height: 0;
+    font: inherit;
+    resize: none;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.25rem;
+    padding: 0.3rem;
+    background: $ui-white;
+    color: $text-primary;
+}
+
+[theme="dark"] .db-search,
+[theme="dark"] .db-value {
+    background: $ui-primary;
+}
+
+.preview-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    background: $ui-secondary;
+    border-bottom: 1px solid $ui-black-transparent;
+    color: $text-primary;
+    font-size: 0.75rem;
+}
+
+.preview-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-button {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.75rem;
+    border: none;
+    border-radius: $space;
+    background: $motion-primary;
+    color: var(--dimod-on-accent, $ui-white);
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.preview-button:hover {
+    background: $motion-tertiary;
+}
+
+.preview-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}

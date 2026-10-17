@@ -1,0 +1,276 @@
+@import "../../../css/units.css";
+@import "../../../css/colors.css";
+
+.layout {
+    display: flex;
+    gap: 1.25rem;
+    height: min(68vh, 640px);
+    min-height: 0;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
+.head {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.titles b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.titles span {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
+.segmented {
+    display: inline-flex;
+    flex-shrink: 0;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.35rem;
+    overflow: hidden;
+}
+
+.segment {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.segment + .segment {
+    border-left: 1px solid $ui-black-transparent;
+}
+
+.segment:hover {
+    background: $ui-secondary;
+}
+
+.segment-on,
+.segment-on:hover {
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.editor-area {
+    position: relative;
+    flex-shrink: 0;
+    height: 9rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: white;
+}
+
+[theme="dark"] .editor-area {
+    background: rgb(30, 30, 30);
+}
+
+.editor-area-blocks {
+    flex-grow: 1;
+    height: auto;
+    min-height: 12rem;
+}
+
+.code-frame {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0;
+    font-family: Menlo, Monaco, "Droid Sans Mono", "Courier New", monospace;
+    font-size: 15px;
+}
+
+.code-line {
+    flex-shrink: 0;
+    padding: 0 0.9rem;
+    line-height: 22px;
+    opacity: 0.9;
+    user-select: none;
+}
+
+.code-keyword {
+    color: $motion-primary;
+    color: $accent-text;
+    font-weight: bold;
+}
+
+[theme="dark"] .code-keyword {
+    color: $accent-text-dark;
+}
+
+.code-body {
+    position: relative;
+    flex-grow: 1;
+    min-height: 0;
+    margin-left: 2.2rem;
+}
+
+.code-host,
+.blocks-host {
+    position: absolute;
+    inset: 0;
+}
+
+.blocks-host :global(.injectionDiv) {
+    position: absolute;
+    inset: 0;
+}
+
+.blocks-host :global(.blocklyMainBackground) {
+    stroke: none;
+}
+
+.status {
+    min-height: 1.1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.status-good {
+    color: hsla(163, 85%, 26%, 1);
+    opacity: 1;
+}
+
+.status-bad {
+    color: hsla(0, 70%, 50%, 1);
+    opacity: 1;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.plot {
+    width: 100%;
+    height: 100px;
+    min-height: 100px;
+    flex-grow: 1;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: $ui-secondary;
+}
+
+.editor-area-blocks ~ .plot {
+    flex-grow: 0;
+}
+
+.side {
+    flex-shrink: 0;
+    width: 14rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0 0.25rem 0 1.25rem;
+    border-left: 1px solid $ui-black-transparent;
+}
+
+.side-title {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.side-gap {
+    margin-top: 1rem;
+}
+
+.group-label {
+    margin: 0.55rem 0 0.1rem;
+    font-size: 0.65rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+}
+
+.snippet {
+    width: 100%;
+    padding: 0.3rem 0.55rem;
+    border: none;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.snippet:hover {
+    background: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.help {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    padding: 0.2rem 0;
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.help code {
+    font-weight: bold;
+    color: $motion-primary;
+    color: $accent-text;
+}
+
+[theme="dark"] .help code {
+    color: $accent-text-dark;
+}
+
+.help span {
+    opacity: 0.9;
+}
+
+.foot-hint {
+    font-size: 0.75rem;
+    font-weight: normal;
+    opacity: 0.9;
+}
+
+.clear-button {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: hsla(0, 70%, 50%, 1);
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.clear-button:hover {
+    border-color: hsla(0, 70%, 50%, 1);
+    background: hsla(0, 70%, 50%, 0.08);
+}
+
+[theme="dark"] .status-good {
+    color: hsla(163, 70%, 55%, 1);
+}

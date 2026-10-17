@@ -1,0 +1,136 @@
+@import "../../css/colors.css";
+@import "../../css/units.css";
+
+.modal-content {
+    width: 400px;
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    background: $ui-white;
+    color: $text-primary;
+    padding: 1.5rem 2.25rem;
+}
+[theme="dark"] .body {
+    background: $ui-primary;
+}
+
+.lead {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.list {
+    margin: 0 0 1.25rem;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    margin-bottom: 1.25rem;
+    border-top: 1px dashed $ui-black-transparent;
+    border-bottom: 1px dashed $ui-black-transparent;
+}
+[theme="dark"] .price-row {
+    border-color: rgba(255, 255, 255, .25);
+}
+
+.price {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.once {
+    font-size: 0.875rem;
+    font-weight: normal;
+    opacity: 0.75;
+}
+
+.balance {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.dits {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    white-space: nowrap;
+    font-weight: bold;
+}
+
+.dit-icon {
+    height: 1em;
+    width: auto;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
+    user-select: none;
+}
+
+.error {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: -0.5rem 0 1.25rem;
+    font-size: 0.875rem;
+    color: $error-primary;
+}
+
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.button-row button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+    background: white;
+    border: 1px solid $ui-black-transparent;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.button-row button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.cancel-button {
+    color: black;
+}
+[theme="dark"] .button-row button.cancel-button {
+    background: $ui-secondary;
+    border-color: rgba(255, 255, 255, .15);
+    color: $text-primary;
+}
+
+.button-row button.ok-button {
+    gap: 0.35rem;
+    background: $motion-primary;
+    border-color: $motion-primary;
+    color: var(--dimod-on-accent, white);
+}
+
+.button-row button.ok-button:not(:disabled):hover {
+    background: $motion-tertiary;
+    border-color: $motion-tertiary;
+}

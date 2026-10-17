@@ -1,0 +1,28 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    background: $ui-primary;
+    color: $text-primary;
+}
+
+.frame {
+    flex-grow: 1;
+    min-height: 0;
+    width: 100%;
+    border: 0;
+    display: block;
+}
+
+.note {
+    padding: calc(2 * $space);
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-align: center;
+}

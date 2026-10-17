@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 20 20">
+    <title>snapping to the palette</title>
+    <defs><mask id="m"><rect width="20" height="20" fill="#fff"/><circle cx="10" cy="12.25" r="1.4" fill="#575E75"/><rect x="9.35" y="12.5" width="1.3" height="2.75" rx=".65" fill="#575E75"/></mask></defs>
+    <g fill="none" fill-rule="evenodd">
+        <path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" stroke="#575E75" stroke-width="2"/>
+        <rect x="4" y="8.5" width="12" height="9" rx="2" fill="#575E75" mask="url(#m)"/>
+    </g>
+</svg>

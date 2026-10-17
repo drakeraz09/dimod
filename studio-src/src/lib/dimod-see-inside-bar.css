@@ -1,0 +1,34 @@
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.6rem;
+    height: 100%;
+    font-size: 0.75rem;
+    color: white;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 18rem;
+}
+
+.remix {
+    flex: none;
+    padding: 0.2rem 0.65rem;
+    border: none;
+    border-radius: 0.25rem;
+    background: white;
+    color: hsla(260, 60%, 50%, 1);
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.remix:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

@@ -1,0 +1,160 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+.panels {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.panel-flex {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+}
+
+.panel-hidden {
+    display: none;
+}
+
+.panel-fixed {
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.panel-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    min-height: 0;
+    min-width: 0;
+}
+
+.grip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: $space;
+    height: 8px;
+    padding: 0 $space;
+    overflow: hidden;
+    font-size: 0.625rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-primary;
+    opacity: 0;
+    cursor: grab;
+    user-select: none;
+    transition: opacity 0.12s ease-out;
+}
+
+.grip:hover,
+.grip:focus-within,
+.panels.dragging .grip {
+    height: 1.125rem;
+    overflow: visible;
+    opacity: 0.9;
+    background: $ui-secondary;
+}
+
+.panels.dragging .grip-dragging {
+    opacity: 0.35;
+}
+
+.grip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.grip-button {
+    margin-left: auto;
+    border: none;
+    background: none;
+    padding: 0 2px;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: inherit;
+    cursor: pointer;
+}
+
+.drop-before {
+    box-shadow: inset 3px 0 0 0 $motion-primary;
+}
+
+.drop-after {
+    box-shadow: inset -3px 0 0 0 $motion-primary;
+}
+
+.divider {
+    flex: 0 0 5px;
+    cursor: col-resize;
+    background: transparent;
+    position: relative;
+}
+
+.divider::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 1px;
+    background: $ui-black-transparent;
+}
+
+.divider:hover::after,
+.divider-active::after {
+    left: 1px;
+    width: 3px;
+    background: $motion-primary;
+}
+
+.rail {
+    flex: 0 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid $ui-black-transparent;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    color: $text-primary;
+    opacity: 0.6;
+}
+
+.rail:hover {
+    opacity: 1;
+    background: $ui-secondary;
+}
+
+.rail-label {
+    writing-mode: vertical-rl;
+    font-size: 0.625rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.resizing {
+    cursor: col-resize;
+}
+
+.resizing .panel-body {
+    pointer-events: none;
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="Layer_1" data-name="Layer 1" viewBox="8.875 8.875 19.21 19.21">
+<defs>
+    <style>
+        .cls-4{fill:none;stroke:#6c5ce7;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}
+    </style>
+</defs>
+<title>zoom-out</title>
+<g class="cls-3">
+    <circle class="cls-4" cx="18" cy="18" r="7"/>
+    <line class="cls-4" x1="23" y1="23" x2="26" y2="26"/>
+    <line class="cls-4" x1="16" y1="18" x2="20" y2="18"/>
+</g>
+</svg>

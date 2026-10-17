@@ -1,0 +1,271 @@
+@import "../../../css/units.css";
+@import "../../../css/colors.css";
+
+.medium {
+    width: 460px;
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.wide {
+    width: 720px;
+    max-width: calc(100vw - 2rem);
+}
+
+.full {
+    width: 1120px;
+    max-width: calc(100vw - 2rem);
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    max-height: calc(100vh - 10rem);
+    font-size: 0.85rem;
+}
+
+.scroll {
+    overflow-y: auto;
+    min-height: 0;
+    margin: 0 -0.5rem;
+    padding: 0 0.5rem;
+}
+
+.hint {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    opacity: 0.9;
+}
+
+.button-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+}
+
+.button-row-left {
+    margin-right: auto;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.button-row button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: 0.6rem;
+}
+
+.tile {
+    width: auto;
+    height: 7rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.tile-image {
+    width: 100%;
+    height: 100%;
+    background: center / contain no-repeat;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 2rem;
+}
+
+.form-label {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.form-label b {
+    display: block;
+    font-weight: 600;
+}
+
+.form-control {
+    width: 11rem;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.list-item:hover {
+    background: $ui-secondary;
+    border-color: $motion-primary;
+}
+
+.list-item small {
+    margin-left: auto;
+    opacity: 0.9;
+}
+
+.shortcuts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.45rem 1.25rem;
+    font-size: 0.8rem;
+}
+
+.shortcuts kbd {
+    font-family: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.progress {
+    height: 0.6rem;
+    border-radius: 0.3rem;
+    background: $ui-tertiary;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: $motion-primary;
+    transition: width 0.1s linear;
+}
+
+.text-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 2.5rem;
+    padding: 0 0.85rem;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 5px;
+    color: inherit;
+    font: inherit;
+}
+
+[theme="dark"] .text-input {
+    background: $ui-secondary;
+    color: white;
+}
+
+.text-input:focus {
+    outline: none;
+    border-color: $motion-primary;
+    box-shadow: 0 0 0 3px $motion-light-transparent;
+}
+
+.setting-line {
+    gap: 0.75rem;
+}
+
+.setting-hint {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin: 0 0 0.25rem 1.5rem;
+}
+
+.setting-line + .setting-hint {
+    margin-left: 0;
+}
+
+.sound-search {
+    width: 100%;
+    box-sizing: border-box;
+    height: 2rem;
+    margin-bottom: .5rem;
+    padding: 0 .85rem;
+    border: 1px solid rgba(128, 128, 128, .4);
+    border-radius: 2rem;
+    background: transparent;
+    color: inherit;
+    font-size: .8rem;
+}
+
+.sound-head {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: .4rem .25rem;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sound-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .3rem .5rem;
+    border-radius: .5rem;
+    cursor: pointer;
+}
+
+.sound-row:hover {
+    background: rgba(128, 128, 128, .18);
+}
+
+.sound-play {
+    flex: none;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: none;
+    border-radius: 50%;
+    background: rgba(128, 128, 128, .25);
+    color: inherit;
+    font-size: .7rem;
+    cursor: pointer;
+}
+
+.sound-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .8rem;
+}
+
+.sound-count {
+    flex: none;
+    opacity: .55;
+    font-size: .7rem;
+    font-weight: 400;
+}

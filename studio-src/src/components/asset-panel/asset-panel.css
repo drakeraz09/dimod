@@ -1,0 +1,66 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+.wrapper {
+    display: flex;
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid $ui-black-transparent;
+    background: white;
+    font-family: var(--dimod-font-ui, "Helvetica Neue", Helvetica, Arial, sans-serif);
+    font-size: 0.85rem;
+}
+[theme="dark"] .wrapper {
+    background: $ui-primary;
+}
+
+[dir="ltr"] .wrapper {
+    border-top-right-radius: $space;
+    border-bottom-right-radius: $space;
+}
+
+[dir="rtl"] .wrapper {
+    border-top-left-radius: $space;
+    border-bottom-left-radius: $space;
+}
+
+.detail-area {
+    display: flex;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: visible;
+}
+
+[dir="ltr"] .detail-area {
+    border-left: 1px solid $ui-black-transparent;
+}
+
+[dir="rtl"] .detail-area {
+    border-right: 1px solid $ui-black-transparent;
+}
+
+.wrapper[data-dimod-list-collapsed="true"] > :first-child {
+    display: none;
+}
+
+.collapse-strip {
+    flex-shrink: 0;
+    width: 14px;
+    padding: 0;
+    border: none;
+    border-right: 1px solid $ui-black-transparent;
+    background: $ui-tertiary;
+    color: $text-primary;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: .7;
+}
+
+.collapse-strip:hover {
+    opacity: 1;
+    color: $motion-primary;
+}
