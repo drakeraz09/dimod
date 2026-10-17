@@ -15,7 +15,6 @@ import downloadBlob from './download-blob';
 import {broadcastTargetCreate} from './dimod-collab';
 import {STAGE_SIZE_MODES} from './layout-constants';
 import {askAlert, askConfirm, askPrompt, CODE_THEMES, setMonacoPref, STUDIO_COLOURS, STUDIO_STYLES} from './dimod-ui';
-const LIVE = new URLSearchParams(location.search).has('livetests');
 const RECENT_KEY = 'dimod:palette-recent';
 const recentIds = () => {
     try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch (e) { return []; }
@@ -1197,10 +1196,8 @@ const actionItems = vm => {
     add('tab-costumes', 'Costumes tab', () => showTab(COSTUMES_TAB_INDEX), {...t, keywords: 'backdrops paint'});
     add('tab-sounds', 'Sounds tab', () => showTab(SOUNDS_TAB_INDEX), {...t, keywords: 'audio music'});
     add('tab-variables', 'Variables tab', () => showTab(VARIABLES_TAB_INDEX), {...t, keywords: 'lists'});
-    if (LIVE) {
-        add('tab-animations', 'Animations tab', () => showTab(ANIMATIONS_TAB_INDEX), {...t, keywords: 'tween keyframes motion'});
-        add('tab-assets', 'Assets tab', () => showTab(FILES_TAB_INDEX), {...t, keywords: 'files fonts data upload'});
-    }
+    add('tab-animations', 'Animations tab', () => showTab(ANIMATIONS_TAB_INDEX), {...t, keywords: 'tween keyframes motion'});
+    add('tab-assets', 'Assets tab', () => showTab(FILES_TAB_INDEX), {...t, keywords: 'files fonts data upload'});
     if (editing && editing.isStage) add('tab-server', 'Server tab', () => showTab(SERVER_TAB_INDEX), {...t, keywords: 'backend multiplayer'});
     const l = {group: 'Add'};
     add('extensions', 'Add an extension', () => dispatch(openExtensionLibrary()), {...l, keywords: 'library plugin'});
@@ -1218,27 +1215,25 @@ const actionItems = vm => {
         {...e, keywords: 'distraction zen fullscreen editor'});
     add('peek', isLivePeekEnabled() ? 'Turn off live value peek' : 'Turn on live value peek',
         () => setLivePeekEnabled(!isLivePeekEnabled()), {...e, keywords: 'hover variable value tooltip'});
-    if (LIVE) {
-        const themeAction = (id, label, keywords, detail) => add(`theme-${id}`, label,
-            () => window.dispatchEvent(new CustomEvent('dimod-set-theme', {detail})), {...e, keywords: `theme ${keywords}`});
-        for (const c of STUDIO_COLOURS) themeAction(`colour-${c.id}`, `Color: ${c.label}`, `colour ${c.keywords}`, {colour: c.id});
-        for (const st of STUDIO_STYLES) themeAction(`style-${st.id}`, `Style: ${st.label}`, `look ${st.keywords}`, {style: st.id});
-        add('code-colors', 'Code editor colors...', () => window.dispatchEvent(new Event('dimod:code-colors')),
-            {...e, keywords: 'monaco theme syntax highlight'});
-        add('code-colors-auto', 'Code colors: match the theme', () => setMonacoPref('auto'), {...e, keywords: 'monaco default'});
-        for (const t of CODE_THEMES) {
-            add(`code-colors-${t.id}`, `Code colors: ${t.name}`, () => setMonacoPref(t.id), {...e, keywords: 'monaco syntax theme'});
-        }
-        const scenes = vm.dimodScenes;
-        if (scenes) {
-            const sc = {group: 'Scenes'};
-            add('scene-new', 'New scene', async () => {
-                const name = await askPrompt('Name for the new scene', {initial: `Scene ${scenes.list.length + 1}`});
-                if (name && name.trim()) scenes.goTo(scenes.create(name.trim()).id, {run: false});
-            }, {...sc, keywords: 'room level add'});
-            add('scene-next', 'Next scene', () => scenes.goRel('next', {run: false}), {...sc, keywords: 'room level'});
-            add('scene-previous', 'Previous scene', () => scenes.goRel('previous', {run: false}), {...sc, keywords: 'room level'});
-        }
+    const themeAction = (id, label, keywords, detail) => add(`theme-${id}`, label,
+        () => window.dispatchEvent(new CustomEvent('dimod-set-theme', {detail})), {...e, keywords: `theme ${keywords}`});
+    for (const c of STUDIO_COLOURS) themeAction(`colour-${c.id}`, `Color: ${c.label}`, `colour ${c.keywords}`, {colour: c.id});
+    for (const st of STUDIO_STYLES) themeAction(`style-${st.id}`, `Style: ${st.label}`, `look ${st.keywords}`, {style: st.id});
+    add('code-colors', 'Code editor colors...', () => window.dispatchEvent(new Event('dimod:code-colors')),
+        {...e, keywords: 'monaco theme syntax highlight'});
+    add('code-colors-auto', 'Code colors: match the theme', () => setMonacoPref('auto'), {...e, keywords: 'monaco default'});
+    for (const t of CODE_THEMES) {
+        add(`code-colors-${t.id}`, `Code colors: ${t.name}`, () => setMonacoPref(t.id), {...e, keywords: 'monaco syntax theme'});
+    }
+    const scenes = vm.dimodScenes;
+    if (scenes) {
+        const sc = {group: 'Scenes'};
+        add('scene-new', 'New scene', async () => {
+            const name = await askPrompt('Name for the new scene', {initial: `Scene ${scenes.list.length + 1}`});
+            if (name && name.trim()) scenes.goTo(scenes.create(name.trim()).id, {run: false});
+        }, {...sc, keywords: 'room level add'});
+        add('scene-next', 'Next scene', () => scenes.goRel('next', {run: false}), {...sc, keywords: 'room level'});
+        add('scene-previous', 'Previous scene', () => scenes.goRel('previous', {run: false}), {...sc, keywords: 'room level'});
     }
     add('settings', 'Open settings', () => dispatch(openSettingsModal()), {...e, keywords: 'preferences options addons'});
     add('restore-points', 'Restore points', () => dispatch(openRestorePointModal()), {...e, keywords: 'backup history recover'});
@@ -1404,7 +1399,7 @@ const insertResult = result => {
 };
 const sceneItems = vm => {
     const host = vm.dimodScenes;
-    if (!LIVE || !host) return [];
+    if (!host) return [];
     return host.list.map(scene => ({
         id: `scene:${scene.id}`,
         type: 'scene',
@@ -1416,7 +1411,7 @@ const sceneItems = vm => {
 };
 const assetItems = vm => {
     const host = vm.dimodAssets;
-    if (!LIVE || !host) return [];
+    if (!host) return [];
     return host.list.map(asset => ({
         id: `asset:${asset.id}`,
         type: 'asset',

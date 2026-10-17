@@ -1358,7 +1358,7 @@ class DimodToolbar extends React.Component {
         const anyBusy = saveStatus === 'busy' || publishStatus === 'busy';
         const saveLabel = saveStatus === 'busy'
             ? `Saving… ${saveProgress}%`
-            : saveStatus === 'done' && getParam('livetests') !== null ?
+            : saveStatus === 'done' ?
                 <React.Fragment><span className="dimod-saved-tick">{'✓'}</span>{'Saved'}</React.Fragment> :
                 {idle: 'Save', done: 'Saved!', error: 'Failed :('}[saveStatus];
         const publishLabel = publishStatus === 'busy'

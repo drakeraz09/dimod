@@ -77,7 +77,6 @@ const CodeThemeDialog = ({onClose}) => {
     );
 };
 CodeThemeDialog.propTypes = {onClose: PropTypes.func.isRequired};
-const LIVETESTS = new URLSearchParams(location.search).has('livetests');
 const icon = paths => (
     <svg
         className={styles$1.icon}
@@ -107,8 +106,8 @@ const ICONS = {
         <path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" />
     </React.Fragment>)
 };
-const COLOURS = STUDIO_COLOURS.filter(c => LIVETESTS || c.id === 'light' || c.id === 'dark');
-const STYLES = LIVETESTS ? STUDIO_STYLES : [];
+const COLOURS = STUDIO_COLOURS;
+const STYLES = STUDIO_STYLES;
 const current = () => ({
     colour: document.body.getAttribute('dimod-colour') || (document.body.getAttribute('theme') === 'dark' ? 'dark' : 'light'),
     style: document.body.getAttribute('dimod-style') || 'classic'
@@ -171,19 +170,17 @@ const ThemePicker = () => {
                     <div className={styles$1.column}>
                         {COLOURS.map(c => item(c, theme.colour === c.id, {colour: c.id}))}
                     </div>
-                    {LIVETESTS ? (
-                        <div className={styles$1.column}>
-                            {STYLES.map((st, i) => item(st, theme.style === st.id, {style: st.id},
-                                <span className={styles$1.number}>{i + 1}</span>))}
-                            <span className={styles$1.gap} />
-                            <button
-                                aria-label="Code editor colors"
-                                className={styles$1.item}
-                                onClick={() => { setOpen(false); setCode(true); }}
-                                onMouseEnter={showTip}
-                            >{ICONS.code}</button>
-                        </div>
-                    ) : null}
+                    <div className={styles$1.column}>
+                        {STYLES.map((st, i) => item(st, theme.style === st.id, {style: st.id},
+                            <span className={styles$1.number}>{i + 1}</span>))}
+                        <span className={styles$1.gap} />
+                        <button
+                            aria-label="Code editor colors"
+                            className={styles$1.item}
+                            onClick={() => { setOpen(false); setCode(true); }}
+                            onMouseEnter={showTip}
+                        >{ICONS.code}</button>
+                    </div>
                 </div>
                 {tip ? (
                     <span className={styles$1.tip} style={{top: tip.top}}>{tip.label}</span>

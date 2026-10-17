@@ -1827,14 +1827,12 @@ class AnimationEditor extends React.Component {
                 return (
             <div className={styles.canvasControls}>
                 <div className={styles.buttonGroup}>
-                    {this.props.vm.isLiveTest ? (
-                        <ToolButton
-                            icon="image"
-                            on={!!this.state.drawMode}
-                            title="Draw (experimental): draw vector frames right into the animation"
-                            onClick={this.h('drawMode', () => this.setState({drawMode: !this.state.drawMode}))}
-                        />
-                    ) : null}
+                    <ToolButton
+                        icon="image"
+                        on={!!this.state.drawMode}
+                        title="Draw (experimental): draw vector frames right into the animation"
+                        onClick={this.h('drawMode', () => this.setState({drawMode: !this.state.drawMode}))}
+                    />
                     <OnionControls ed={ed} />
                     <GridControls ed={ed} />
                     <SnapControls ed={ed} />

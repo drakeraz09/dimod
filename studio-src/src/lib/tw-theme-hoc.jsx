@@ -13,7 +13,6 @@ const STYLE_KEY = 'dimod:style';
 
 const darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-const LIVETESTS = new URLSearchParams(location.search).has('livetests');
 const read = key => {
     try {
         return localStorage.getItem(key);
@@ -21,8 +20,8 @@ const read = key => {
         return null;
     }
 };
-const allowedColour = id => (id === 'light' || id === 'dark' || (LIVETESTS && studioColour(id)) ? id : null);
-const allowedStyle = id => (id === 'classic' || (LIVETESTS && studioStyle(id)) ? id : null);
+const allowedColour = id => (id === 'light' || id === 'dark' || studioColour(id) ? id : null);
+const allowedStyle = id => (id === 'classic' || studioStyle(id) ? id : null);
 
 const initialChoice = () => {
     const legacy = LEGACY_THEMES[read(THEME_KEY)];
@@ -48,17 +47,15 @@ const sheet = css => {
 const darkModeStylesheet = sheet(darkModeCSS);
 const coloursStylesheet = sheet(coloursCSS);
 const styleStylesheet = sheet([godotCSS, workbenchCSS, railCSS].join('\n'));
-if (LIVETESTS) {
-    document.head.appendChild(sheet(touchesCSS));
-    document.addEventListener('click', e => {
-        const flag = e.target.closest && e.target.closest('[class*="green-flag_green-flag_"]');
-        if (!flag) return;
-        flag.removeAttribute('data-dimod-pulse');
-        void flag.offsetWidth;
-        flag.setAttribute('data-dimod-pulse', '');
-        flag.addEventListener('animationend', () => flag.removeAttribute('data-dimod-pulse'), {once: true});
-    }, true);
-}
+document.head.appendChild(sheet(touchesCSS));
+document.addEventListener('click', e => {
+    const flag = e.target.closest && e.target.closest('[class*="green-flag_green-flag_"]');
+    if (!flag) return;
+    flag.removeAttribute('data-dimod-pulse');
+    void flag.offsetWidth;
+    flag.setAttribute('data-dimod-pulse', '');
+    flag.addEventListener('animationend', () => flag.removeAttribute('data-dimod-pulse'), {once: true});
+}, true);
 
 const ThemeHOC = function (WrappedComponent) {
     class ThemeComponent extends React.Component {

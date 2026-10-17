@@ -48,7 +48,7 @@ const load = () => {
             defineAnimationBlocks(_ScratchBlocks);
             defineExprBlocks(_ScratchBlocks);
             defineScenesBlocks(_ScratchBlocks);
-            if (new URLSearchParams(location.search).has('livetests')) installReportColours(_ScratchBlocks);
+            installReportColours(_ScratchBlocks);
             defineBlockspaceBlocks(_ScratchBlocks);
             colourStringBlocks(_ScratchBlocks);
 

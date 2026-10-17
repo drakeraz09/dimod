@@ -24,7 +24,7 @@ const useSceneSprites = (vm, sprites) => {
         return () => vm.runtime.removeListener('DIMOD_SCENES', bump);
     }, [vm]);
     const host = vm && vm.dimodScenes;
-    if (!host || !sprites || !new URLSearchParams(location.search).has('livetests')) return sprites;
+    if (!host || !sprites) return sprites;
     const shown = {};
     Object.keys(sprites).forEach(id => {
         const target = vm.runtime.getTargetById(id);

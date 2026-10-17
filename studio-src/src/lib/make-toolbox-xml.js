@@ -1591,7 +1591,7 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     const motionXML = moveCategory('motion') || motion(isInitialSetup, isStage, targetId);
     const withAssets = (xml, before, extra) => {
         const at = xml.indexOf(before);
-        return isLiveTest && extra && at >= 0 ? `${xml.slice(0, at)}${extra}\n${xml.slice(at)}` : xml;
+        return extra && at >= 0 ? `${xml.slice(0, at)}${extra}\n${xml.slice(at)}` : xml;
     };
     const looksXML = moveCategory('looks') || withAssets(looks(isInitialSetup, isStage, targetId, costumeName, backdropName),
         isStage ? '<block type="looks_switchbackdropto">' : `<block id="${targetId}_switchcostumeto"`, looksAssetsXML(isStage));
@@ -1614,9 +1614,9 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
         looksXML,
         animationCategoryXML(isStage),
         soundXML,
-        ...(isLiveTest ? [assetsCategoryXML(isStage)] : []),
+        assetsCategoryXML(isStage),
         eventsXML,
-        ...(isLiveTest ? [scenesCategoryXML()] : []),
+        scenesCategoryXML(),
         clientCategoryXML(),
         controlXML,
         sensingXML,

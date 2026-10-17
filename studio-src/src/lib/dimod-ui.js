@@ -671,7 +671,7 @@ const loadMonaco = () => monacoPending || (monacoPending = import(/* webpackChun
         monacoModule = m;
         m.editor.defineTheme('dimod-godot', GODOT_MONACO);
         defineCodeThemes(m);
-        if (new URLSearchParams(location.search).has('livetests')) m.editor.onDidCreateEditor(addColorsButton);
+        m.editor.onDidCreateEditor(addColorsButton);
         window.addEventListener('dimod-editor-theme', () => m.editor.setTheme(monacoThemeName()));
         return m;
     }, e => { monacoPending = null; throw e; }));

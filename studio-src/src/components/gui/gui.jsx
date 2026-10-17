@@ -392,7 +392,7 @@ const GUIComponent = props => {
         </ContextMenuWrapTab>
     </Tab>);
     const filesTab = (<Tab
-        className={classNames(tabClassNames.tab, IsLiveTests ? null : styles.tabDisabled)}
+        className={tabClassNames.tab}
         data-dimod-tab="assets"
         onClick={onActivateFilesTab}
     >
@@ -675,7 +675,7 @@ const GUIComponent = props => {
                 ) : null}
                 <Box className={classNames(styles.bodyWrapper, isPlayground ? styles.bodyWrapperPlayground : null)}>
                     <DimodPanels
-                        panels={[...(IsLiveTests && !isPlayerOnly && !isEmbedded ? [{
+                        panels={[...(!isPlayerOnly && !isEmbedded ? [{
                             key: 'scenes',
                             label: 'Scenes',
                             kind: 'fixed',
@@ -916,7 +916,7 @@ const GUIComponent = props => {
                                             ) : null}
                                         </TabPanel>
                                         <TabPanel className={tabClassNames.tabPanel}>
-                                            {IsLiveTests && filesTabVisible ? (
+                                            {filesTabVisible ? (
                                                 <ErrorBoundary
                                                     action="Assets tab"
                                                     label="Assets"
@@ -976,7 +976,7 @@ const GUIComponent = props => {
                 </Box>
                 <DragLayer />
                 {isPlayerOnly || isEmbedded ? null : <DimodEditorTools vm={vm} />}
-                {IsLiveTests && !isPlayerOnly && !isEmbedded ? <DimodAssetDrag /> : null}
+                {!isPlayerOnly && !isEmbedded ? <DimodAssetDrag /> : null}
             </Box>
         );
     }}</MediaQuery>);
