@@ -1066,10 +1066,10 @@ class Blocks extends React.Component {
         if (!focused && cached && cached.revision === revision && cached.targetId === target.id) {
             localMismatch = cached.localMismatch;
         } else {
-            const vmIds = focused ?
-                [...focused.blockIds].filter(id => target.blocks._blocks[id]) :
-                Object.keys(target.blocks._blocks);
-            const wsIds = new Set(this.workspace.getAllBlocks(false).map(b => b.id));
+            // skip shadows, vm keeps obscured ones + proc arg reporters get new ids in the ws
+            const vmIds = (focused ? [...focused.blockIds] : Object.keys(target.blocks._blocks))
+                .filter(id => target.blocks._blocks[id] && !target.blocks._blocks[id].shadow);
+            const wsIds = new Set(this.workspace.getAllBlocks(false).filter(b => !b.isShadow()).map(b => b.id));
             localMismatch = vmIds.length !== wsIds.size || vmIds.some(id => !wsIds.has(id));
             this._healthCache = {revision: focused ? null : revision, targetId: target.id, hash: null, localMismatch};
         }

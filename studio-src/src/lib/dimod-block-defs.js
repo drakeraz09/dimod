@@ -888,7 +888,11 @@ const ramp = (engine, param, value) => {
 };
 const amount = value => clamp(Cast.toNumber(value), 0, 100) / 100;
 const disconnectAll = nodes => nodes.forEach(n => n && n.disconnect());
-class EchoEffect extends Effect {
+// dont build nodes until the effect is actually used, reverb setup on every first play made beats start late
+class LazyEffect extends Effect {
+    set (value, ...args) { if (!this.initialized && value === this.DEFAULT_VALUE) return; return super.set(value, ...args); }
+}
+class EchoEffect extends LazyEffect {
     get name () { return 'echo'; }
     initialize () {
         const ctx = this.audioEngine.audioContext;
@@ -932,7 +936,7 @@ const impulseFor = ctx => {
     }
     return impulse;
 };
-class ReverbEffect extends Effect {
+class ReverbEffect extends LazyEffect {
     get name () { return 'reverb'; }
     initialize () {
         const ctx = this.audioEngine.audioContext;
@@ -963,7 +967,7 @@ class ReverbEffect extends Effect {
         super.dispose();
     }
 }
-const filterEffect = (name, type, frequencyFor) => class extends Effect {
+const filterEffect = (name, type, frequencyFor) => class extends LazyEffect {
     get name () { return name; }
     initialize () {
         this.filter = this.audioEngine.audioContext.createBiquadFilter();
@@ -992,7 +996,7 @@ const distortionCurve = v => {
     }
     return curve;
 };
-class DistortionEffect extends Effect {
+class DistortionEffect extends LazyEffect {
     get name () { return 'distortion'; }
     initialize () {
         const ctx = this.audioEngine.audioContext;

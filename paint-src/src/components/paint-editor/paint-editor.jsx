@@ -297,7 +297,7 @@ LivetestTopBar.propTypes = {
     width: PropTypes.number
 };
 
-const canvasControls = props => (
+const canvasControls = (props, noExtra) => (
     <div className={styles.canvasControls}>
         {isVector(props.format) ?
             <Button
@@ -332,7 +332,7 @@ const canvasControls = props => (
         }
         {/* Zoom controls */}
         <InputGroup className={styles.zoomControls}>
-            {props.extraViewControls ? (
+            {props.extraViewControls && !noExtra ? (
                 <div className={styles.extraViewControls}>{props.extraViewControls}</div>
             ) : null}
             <ButtonGroup>
@@ -630,7 +630,7 @@ const PaintEditorComponent = props => (
             </div>
             {LIVETEST && props.canvas ? <DimodSidePanel onUpdateImage={props.onUpdateImage} /> : null}
         </div>
-        {LIVETEST ? <div className={styles.bottomRow}>{canvasControls(props)}</div> : null}
+        {LIVETEST ? <div className={styles.bottomRow}>{canvasControls(props, true)}{props.extraViewControls ? <div className={styles.extraViewControls}>{props.extraViewControls}</div> : null}</div> : null}
     </div>
 );
 

@@ -608,20 +608,22 @@ class DimodCollabCursors extends React.Component {
         if (!workspace) return;
         const container = (workspace.getInjectionDiv && workspace.getInjectionDiv()) || workspace.getParentSvg();
         if (!container || !container.contains(e.target)) return;
-        const pos = this.getWorkspaceXYFromEvent(e);
-        if (!pos) return;
-        this.trackAndMaybeBroadcast(pos);
+        this._client = {x: e.clientX, y: e.clientY};
+        this.trackAndMaybeBroadcast();
     }
     handleDragPositionChanged (e) {
         if (!e.detail) return;
-        const {clientX, clientY} = e.detail;
-        const pos = (Number.isFinite(clientX) && Number.isFinite(clientY) &&
-            this.getWorkspaceXYFromClient(clientX, clientY)) || e.detail;
-        this.trackAndMaybeBroadcast(pos);
+        this._client = {x: e.detail.clientX, y: e.detail.clientY, d: e.detail};
+        this.trackAndMaybeBroadcast();
     }
-    trackAndMaybeBroadcast (pos) {
-        this.localPos = pos;
-        if (this.state.chatting) return;
+    get localPos () {
+        const c = this._client; // lazy so moves dont force a layout (getScreenCTM) every event
+        if (c) { this._client = null; this._lp = (Number.isFinite(c.x) && Number.isFinite(c.y) && this.getWorkspaceXYFromClient(c.x, c.y)) || c.d || this._lp; }
+        return this._lp;
+    }
+    set localPos (p) { this._lp = p; this._client = null; }
+    trackAndMaybeBroadcast () {
+        if (!window.dimodCollab || this.state.chatting) return;
         const now = Date.now();
         const sinceLast = now - this.lastBroadcastAt;
         if (sinceLast < BROADCAST_THROTTLE) {
@@ -630,7 +632,7 @@ class DimodCollabCursors extends React.Component {
             }
             return;
         }
-        this.broadcastPosition(pos);
+        this.broadcastPosition(this.localPos);
     }
     flushTrailingBroadcast () {
         this._trailingTimer = null;

@@ -805,7 +805,7 @@ const installDragPreviewHook = ScratchBlocks => {
             const detail = {x: this.startXY_.x + delta.x, y: this.startXY_.y + delta.y};
             if (dimodDragState.current) { dimodDragState.current.x = detail.x; dimodDragState.current.y = detail.y; }
             if (mouseEvent) { detail.clientX = mouseEvent.clientX; detail.clientY = mouseEvent.clientY; }
-            window.dispatchEvent(new CustomEvent('dimod:drag-position-changed', {detail}));
+            if (window.dimodCollab) window.dispatchEvent(new CustomEvent('dimod:drag-position-changed', {detail}));
         } catch (e) {
         }
         return result;

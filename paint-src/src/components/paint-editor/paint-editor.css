@@ -322,6 +322,8 @@ $border-radius: .5rem;
 
 .bottom-row {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
 }
 
 .bottom-row .canvas-controls {
@@ -390,3 +392,6 @@ $border-radius: .5rem;
         margin: 0;
     }
 }
+/* keep fullscreen btn visible when shrunk */
+.bottom-row > .canvas-controls { flex: 1 1 0; min-width: 0; }
+.bottom-row > .extra-view-controls { flex-shrink: 0; margin-left: 0; margin-right: calc(2 * $grid-unit); }
