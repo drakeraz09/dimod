@@ -298,3 +298,12 @@
 [theme="dark"] .panel {
     background: $ui-primary;
 }
+
+.user-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-left: 0.125rem;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}

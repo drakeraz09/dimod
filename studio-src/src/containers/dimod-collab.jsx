@@ -1081,6 +1081,7 @@ class DimodCollabPresence extends React.Component {
         if (window.dimodCollab) window.dimodCollab.sendViewingUpdate({targetId});
     }
     handleRemoteViewing (payload, fromUserId) {
+        if (payload.sceneOnly) return;
         this.viewers[fromUserId] = {
             targetId: payload.targetId,
             assetKind: payload.assetKind || null,

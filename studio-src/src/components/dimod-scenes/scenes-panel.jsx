@@ -24,10 +24,12 @@ const useHost = vm => {
             if (next !== key) { key = next; bump(); }
         };
         runtime.on('DIMOD_SCENES', bump);
+        runtime.on('DIMOD_SCENE_PRESENCE', bump);
         vm.on('targetsUpdate', onTargets);
         runtime.on('PROJECT_LOADED', bump);
         return () => {
             runtime.removeListener('DIMOD_SCENES', bump);
+            runtime.removeListener('DIMOD_SCENE_PRESENCE', bump);
             vm.removeListener('targetsUpdate', onTargets);
             runtime.removeListener('PROJECT_LOADED', bump);
         };
@@ -253,6 +255,14 @@ const ScenesPanel = ({vm, drag}) => {
                                         }}
                                     />
                                 ) : <span className={styles.name}>{scene.name}</span>}
+                                {(window.dimodScenesCollab ? window.dimodScenesCollab.usersIn(scene.id) : []).map(u => (
+                                    <span
+                                        className={styles.userDot}
+                                        key={u.id}
+                                        style={{background: u.color}}
+                                        title={`${u.name} is here`}
+                                    />
+                                ))}
                                 {isMain ? (
                                     <span
                                         className={classNames(styles.star, styles.starOn)}

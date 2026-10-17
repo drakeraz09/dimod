@@ -392,16 +392,19 @@ class AssetHost {
     }
     revokeUrls () { this.urls.forEach(url => URL.revokeObjectURL(url)); this.urls.clear(); }
     async loadFrom (meta, zip) {
+        const gen = this.loadGen = (this.loadGen || 0) + 1;
         this.clear();
-        const list = Array.isArray(meta) ? meta.filter(a => a && a.id && a.name && a.ext) : [];
-        await Promise.all(list.map(async a => {
+        const list = Array.isArray(meta) ? meta.filter((a, i, all) => a && a.id && a.name && a.ext && all.findIndex(b => b && b.id === a.id) === i) : [];
+        const got = await Promise.all(list.map(async a => {
             const entry = zip && zip.file ? zip.file(`${ASSETS_DIR}${a.id}.${a.ext}`) : null;
-            if (!entry) return;
-            this.data.set(a.id, await entry.async('uint8array'));
-            this.list.push({id: String(a.id), name: String(a.name), ext: String(a.ext), kind: a.kind || kindOfExt(a.ext),
-                size: this.data.get(a.id).length});
+            return entry ? [a, await entry.async('uint8array')] : null;
         }));
-        this.list.sort((x, y) => list.findIndex(a => a.id === x.id) - list.findIndex(a => a.id === y.id));
+        if (gen !== this.loadGen) return;
+        this.clear();
+        for (const [a, bytes] of got.filter(Boolean)) {
+            this.data.set(String(a.id), bytes);
+            this.list.push({id: String(a.id), name: String(a.name), ext: String(a.ext), kind: a.kind || kindOfExt(a.ext), size: bytes.length});
+        }
         this.changed(true);
     }
     files () {

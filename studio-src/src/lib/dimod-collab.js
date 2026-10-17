@@ -1794,8 +1794,36 @@ class ScenesAssetsCollab {
             if (this.waiting.size) this.applyScenes({members: {}});
             this.onScenes();
         });
+        this.here = new Map();
+        this.sentScene = null;
+        this.sentAt = 0;
+        vm.runtime.on('DIMOD_SCENES', () => this.sendScene());
         this.attach();
-        setInterval(() => this.attach(), 2000);
+        setInterval(() => { this.attach(); this.sendScene(); this.pruneHere(); }, 2000);
+    }
+    sendScene (force) {
+        const c = window.dimodCollab;
+        const cur = this.scenes.current;
+        if (!c || !c.joined || !cur) return;
+        if (!force && cur === this.sentScene && Date.now() - this.sentAt < 6000) return;
+        this.sentScene = cur;
+        this.sentAt = Date.now();
+        c.send('viewing', {sceneOnly: true, scene: cur});
+    }
+    pruneHere () {
+        const now = Date.now();
+        let gone = false;
+        for (const [k, v] of this.here) if (now - v.at > 15000) { this.here.delete(k); gone = true; }
+        if (gone) this.vm.runtime.emit('DIMOD_SCENE_PRESENCE');
+    }
+    onHere (msg) {
+        if (!msg.from || typeof msg.scene !== 'string') return;
+        const old = this.here.get(msg.from);
+        this.here.set(msg.from, {scene: msg.scene, name: msg.fromUsername || '?', at: Date.now()});
+        if (!old || old.scene !== msg.scene) this.vm.runtime.emit('DIMOD_SCENE_PRESENCE');
+    }
+    usersIn (scene) {
+        return [...this.here].filter(([, v]) => v.scene === scene).map(([id, v]) => ({id, name: v.name, color: colorForUserId(id)}));
     }
     send (type, data) { const c = window.dimodCollab; if (c) c.send(type, data); }
     attach () {
@@ -2008,7 +2036,15 @@ class ScenesAssetsCollab {
     }
     onMessage (msg) {
         switch (msg.type) {
-        case 'joined': return this.ask();
+        case 'joined': this.sendScene(true); return this.ask();
+        case 'viewing': return msg.sceneOnly ? this.onHere(msg) : null;
+        case 'presence': {
+            if (!Array.isArray(msg.users)) return;
+            const ids = new Set(msg.users.map(u => u && u.userId));
+            for (const k of [...this.here.keys()]) if (!ids.has(k)) this.here.delete(k);
+            this.sendScene(true);
+            return this.vm.runtime.emit('DIMOD_SCENE_PRESENCE');
+        }
         case 'scene-state-request': return setTimeout(() => this.answer(msg), Math.random() * 400);
         case 'scene-state': return this.onState(msg);
         case 'scene-patch': return this.applyScenes(msg);
@@ -2026,7 +2062,7 @@ const quietAssets = fn => {
 };
 const installScenesCollab = vm => {
     installCollabHooks(vm);
-    if (!scenesCollab && vm.dimodScenes && vm.dimodAssets && typeof window !== 'undefined') scenesCollab = new ScenesAssetsCollab(vm);
+    if (!scenesCollab && vm.dimodScenes && vm.dimodAssets && typeof window !== 'undefined') { scenesCollab = new ScenesAssetsCollab(vm); window.dimodScenesCollab = scenesCollab; }
     return scenesCollab;
 };
 export {ScenesAssetsCollab, installScenesCollab, installCollabHooks, remotely, broadcastTileMaps, quietAssets, UNSTABLE_ID_OPCODES, abandonGesture, allTargetHashes, applyRemoteAssetUpdate, applyRemoteBlocksShared, applyRemoteTargetCreate, applyRemoteTargetDelete, applyRemoteTargetRename, applyRemoteTargetReorder, applyTargetBlocks, attachShadowRef, broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeOrder, broadcastCostumeRename, broadcastCostumeUpdate, broadcastSoundAdd, broadcastSoundDelete, broadcastSoundOrder, broadcastSoundRename, broadcastSoundUpdate, broadcastTargetCreate, broadcastTargetDelete, broadcastTargetRename, broadcastTargetReorder, clearRemoteEdited, computeBlocksHash as collabWorkspaceHealthDefault, colorForUserId, computeBlocksFingerprint, computeBlocksHash, contrastTextColor, dimodDragState, ensureEventVariables, findShadowRef, flushCostumeBroadcast, getRemoteEditedNames, handleRemotePaintPacket, hasActiveGesture, hasUnstableId, installBlockStateResponder, installConnectSafetyRails, installDragPreviewHook, installFieldCarets, installGestureRecovery, installPaintCollab, isApplyingRemotePaint, isLivePaintCostume, isPaintGestureActive, registerFieldCaretScope, repairAskewBlocks, resolveIncomingEvent, resolveShadowRef, resumePaintCollab, sanitizePreviewSvg, setAssetOrder, shareBlocksToTargetWithSync, suspendPaintCollab, targetBlocksHash, uninstallPaintCollab};
