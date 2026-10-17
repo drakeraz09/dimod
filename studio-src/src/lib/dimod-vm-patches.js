@@ -8,6 +8,7 @@ import {setAnimationMenuVM} from './dimod-animation/blocks';
 import {installAnimationCollab} from './dimod-animation/index';
 import {installBlockSpaceBlocksVM, installBlockspaceRuntime} from './block-space/runtime';
 import {installScenesVM} from './dimod-scenes';
+import {installScenesCollab} from './dimod-collab';
 import {setScenesMenuVM} from './dimod-scenes-blocks';
 import {installBlockspaceCollab, installConsoleStore, setMenuVM} from './block-space/editor';
 import sb3 from 'scratch-vm/src/serialization/sb3';
@@ -81,7 +82,28 @@ const patchClearEffectsTint = () => {
         return result;
     };
 };
+const patchSpriteKeepsExtensionStorage = vm => {
+    if (vm.__dimodSpriteKeepsStorage) return;
+    vm.__dimodSpriteKeepsStorage = true;
+    const original = vm.installTargets;
+    vm.installTargets = function (targets, extensions, wholeProject) {
+        const keep = this.runtime.extensionStorage;
+        const r = original.call(this, targets, extensions, wholeProject);
+        if (wholeProject || !keep) return r;
+        return Promise.resolve(r).then(value => {
+            const added = this.runtime.extensionStorage;
+            if (added !== keep) {
+                Object.keys(added || {}).forEach(key => {
+                    if (!(key in keep)) keep[key] = added[key];
+                });
+                this.runtime.extensionStorage = keep;
+            }
+            return value;
+        });
+    };
+};
 const patchVM = vm => {
+    patchSpriteKeepsExtensionStorage(vm);
     patchServerCodeStorage(vm);
     patchMissingStage(vm);
     patchSafeStop(vm);
@@ -108,6 +130,7 @@ const patchVM = vm => {
     setMenuVM(vm);
     installBlockspaceCollab(vm);
     installAnimationCollab(vm);
+    installScenesCollab(vm);
     installConsoleStore(vm);
 };
 const DEFAULT_TIMEOUT_MS = 25000;

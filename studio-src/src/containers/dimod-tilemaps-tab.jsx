@@ -22,6 +22,7 @@ import {
 } from '../lib/dimod-tilemaps.js';
 import JSZip from 'jszip';
 import {isDarkTheme, askConfirm} from '../lib/dimod-ui';
+import {broadcastTileMaps} from '../lib/dimod-collab';
 import styles from '../components/dimod-tilemaps/tilemaps-tab.css';
 import shared from '../components/block-space/block-space-panel.css';
 const svg = body => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">${body}</svg>`;
@@ -206,6 +207,7 @@ class DimodTileMapsTab extends React.Component {
         this.editing = true;
         try { this.runtime.emit(CHANGED_EVENT, {}); } finally { this.editing = false; }
         this.runtime.emitProjectChanged();
+        broadcastTileMaps(this.props.vm);
         const sig = JSON.stringify(this.doc.maps.map(m => [m.name, m.layers.map(l => l.name)]));
         if (sig !== this.namesSig) {
             this.namesSig = sig;

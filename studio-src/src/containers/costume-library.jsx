@@ -10,7 +10,6 @@ import LibraryComponent from '../components/library/library.jsx';
 import {assetBrowser, addDimodLibraryEntry} from '../lib/dimod-assets';
 import {showErrorToast} from '../lib/dimod-ui';
 import {uploadTab} from '../components/library/library-upload.jsx';
-import {broadcastCostumeAdd} from '../lib/dimod-collab';
 
 const messages = defineMessages({
     libraryTitle: {
@@ -50,10 +49,7 @@ class CostumeLibrary extends React.PureComponent {
             vmCostume.libraryId = item.libraryFilePage;
             vmCostume.dataFormat = item.dataFormat;
         }
-        const targetId = this.props.vm.editingTarget && this.props.vm.editingTarget.id;
-        this.props.vm.addCostumeFromLibrary(item.md5ext, vmCostume).then(() => {
-            if (targetId) broadcastCostumeAdd(this.props.vm, targetId);
-        });
+        this.props.vm.addCostumeFromLibrary(item.md5ext, vmCostume);
     }
     render () {
         return (

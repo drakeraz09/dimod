@@ -27,13 +27,9 @@ import downloadBlob from '../lib/download-blob';
 import log from '../lib/log';
 import {runAsRemote} from '../lib/dimod-project';
 import {
-    broadcastTargetCreate,
     applyRemoteTargetCreate,
-    broadcastTargetRename,
     applyRemoteTargetRename,
-    broadcastTargetDelete,
     applyRemoteTargetDelete,
-    broadcastTargetReorder,
     applyRemoteTargetReorder,
     shareBlocksToTargetWithSync,
     applyRemoteBlocksShared,
@@ -152,8 +148,6 @@ class TargetPane extends React.Component {
     }
     handleChangeSpriteName (name) {
         this.props.vm.renameSprite(this.props.editingTarget, name);
-        const target = this.props.vm.runtime.getTargetById(this.props.editingTarget);
-        if (target) broadcastTargetRename(this.props.vm, this.props.editingTarget, target.getName());
     }
     handleChangeSpriteSize (size) {
         this.props.vm.postSpriteInfo({size});
@@ -169,7 +163,6 @@ class TargetPane extends React.Component {
     }
     handleDeleteSprite (id) {
         const restoreSprite = this.props.vm.deleteSprite(id);
-        broadcastTargetDelete(id);
         const restoreFun = () => restoreSprite().then(this.handleActivateBlocksTab);
 
         this.props.dispatchUpdateRestore({
@@ -179,7 +172,7 @@ class TargetPane extends React.Component {
 
     }
     handleDuplicateSprite (id) {
-        this.props.vm.duplicateSprite(id).then(() => broadcastTargetCreate(this.props.vm));
+        this.props.vm.duplicateSprite(id);
     }
     handleExportSprite (id) {
         const spriteName = this.props.vm.runtime.getTargetById(id).getName();
@@ -204,10 +197,7 @@ class TargetPane extends React.Component {
         const item = surpriseSprites[Math.floor(Math.random() * surpriseSprites.length)];
         randomizeSpritePosition(item);
         this.props.vm.addSprite(JSON.stringify(item))
-            .then(() => {
-                broadcastTargetCreate(this.props.vm);
-                this.handleActivateBlocksTab();
-            });
+            .then(() => this.handleActivateBlocksTab());
     }
     handlePaintSpriteClick () {
         const formatMessage = this.props.intl.formatMessage;
@@ -217,7 +207,6 @@ class TargetPane extends React.Component {
             formatMessage(sharedMessages.costume, {index: 1})
         );
         this.props.vm.addSprite(JSON.stringify(emptyItem)).then(() => {
-            broadcastTargetCreate(this.props.vm);
             setTimeout(() => { // Wait for targets update to propagate before tab switching
                 this.props.onActivateTab(COSTUMES_TAB_INDEX);
             });
@@ -228,10 +217,7 @@ class TargetPane extends React.Component {
     }
     handleNewSprite (spriteJSONString) {
         return this.props.vm.addSprite(spriteJSONString)
-            .then(() => {
-                broadcastTargetCreate(this.props.vm);
-                this.handleActivateBlocksTab();
-            })
+            .then(() => this.handleActivateBlocksTab())
             .catch(err => {
                 log.error(err);
             });
@@ -299,15 +285,12 @@ class TargetPane extends React.Component {
         const {sprite: targetId} = this.props.hoveredTarget;
         if (dragInfo.dragType === DragConstants.SPRITE) {
             // Add one to both new and target index because we are not counting/moving the stage
-            const movedTarget = this.props.vm.runtime.targets[dragInfo.index + 1];
             this.props.vm.reorderTarget(dragInfo.index + 1, dragInfo.newIndex + 1);
-            broadcastTargetReorder(dragInfo.index + 1, dragInfo.newIndex + 1, movedTarget && movedTarget.id);
         } else if (dragInfo.dragType === DragConstants.BACKPACK_SPRITE) {
             // TODO storage does not have a way of loading zips right now, and may never need it.
             // So for now just grab the zip manually.
             fetchSprite(dragInfo.payload.bodyUrl)
-                .then(sprite3Zip => this.props.vm.addSprite(sprite3Zip))
-                .then(() => broadcastTargetCreate(this.props.vm));
+                .then(sprite3Zip => this.props.vm.addSprite(sprite3Zip));
         } else if (targetId) {
             // Something is being dragged over one of the sprite tiles or the backdrop.
             // Dropping assets like sounds and costumes duplicate the asset on the

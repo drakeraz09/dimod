@@ -19,7 +19,6 @@ import SoundEditorComponent from '../components/sound-editor/sound-editor.jsx';
 import AudioBufferPlayer from '../lib/audio/audio-buffer-player.js';
 import log from '../lib/log.js';
 import confirmStyles from '../css/confirm-dialog.css';
-import {broadcastSoundUpdate, broadcastSoundRename} from '../lib/dimod-collab';
 
 const UNDO_STACK_SIZE = 250;
 
@@ -183,7 +182,6 @@ class SoundEditor extends React.Component {
                         this.props.soundIndex,
                         this.audioBufferPlayer.buffer,
                         wavBytes);
-                    broadcastSoundUpdate(this.props.vm, this.props.soundIndex, wavBytes);
                     return true; // Edit was successful
                 })
             )
@@ -212,13 +210,7 @@ class SoundEditor extends React.Component {
         this.setState({ playhead });
     }
     handleChangeName(name) {
-        const target = this.props.vm.editingTarget;
-        const oldName = target && target.sprite.sounds[this.props.soundIndex]?.name;
         this.props.vm.renameSound(this.props.soundIndex, name);
-        if (target) {
-            const newName = target.sprite.sounds[this.props.soundIndex]?.name;
-            broadcastSoundRename(this.props.vm, target.id, this.props.soundIndex, oldName, newName);
-        }
     }
     handleDelete() {
         const { channels, sampleRate } = this.copyCurrentBuffer();

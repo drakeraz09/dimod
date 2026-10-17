@@ -10,7 +10,6 @@ import LibraryComponent from '../components/library/library.jsx';
 import {assetBrowser, addDimodLibraryEntry} from '../lib/dimod-assets';
 import {showErrorToast} from '../lib/dimod-ui';
 import {uploadTab} from '../components/library/library-upload.jsx';
-import {broadcastCostumeAdd} from '../lib/dimod-collab';
 
 const messages = defineMessages({
     libraryTitle: {
@@ -51,10 +50,7 @@ class BackdropLibrary extends React.Component {
             vmBackdrop.dataFormat = item.dataFormat;
         }
         // Do not switch to stage, just add the backdrop
-        const stage = this.props.vm.runtime.getTargetForStage();
-        this.props.vm.addBackdrop(item.md5ext, vmBackdrop).then(() => {
-            if (stage) broadcastCostumeAdd(this.props.vm, stage.id);
-        });
+        this.props.vm.addBackdrop(item.md5ext, vmBackdrop);
     }
     render () {
         return (

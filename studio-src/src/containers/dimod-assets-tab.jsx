@@ -22,6 +22,10 @@ import textIcon from '../components/asset-panel/icon--new-text.svg';
 import downloadBlob from '../lib/download-blob.js';
 import errorBoundaryHOC from '../lib/error-boundary-hoc.jsx';
 import {kindOfExt, mimeOfExt, spriteListKey} from '../lib/dimod-scenes.js';
+import {handleRemotePaintPacket, installPaintCollab, isApplyingRemotePaint, quietAssets, uninstallPaintCollab} from '../lib/dimod-collab.js';
+import {runAsRemote} from '../lib/dimod-project.js';
+import {RemoteCarets} from '../components/block-space/block-space-panel.jsx';
+import caretStyles from '../components/block-space/block-space-panel.css';
 const ANIM_EXT = 'ks5anim';
 const PREVIEW_FPS = 12;
 const PREVIEW_SIZE = 96;
@@ -221,6 +225,7 @@ const CodeEditor = ({asset, host, language, onLanguage}) => {
     const editor = React.useRef(null);
     const own = React.useRef(null);
     const timer = React.useRef(null);
+    const carets = React.useRef(null);
     const version = useExternalVersion(asset, host, own);
     const save = React.useCallback(() => {
         clearTimeout(timer.current);
@@ -252,6 +257,7 @@ const CodeEditor = ({asset, host, language, onLanguage}) => {
                 tabSize: 2
             });
             editor.current = ed;
+            carets.current = new RemoteCarets(ed, {getTargetId: () => `asset:${asset.id}`, styles: caretStyles});
             subs = [
                 ed.onDidChangeModelContent(() => { clearTimeout(timer.current); timer.current = setTimeout(save, 600); }),
                 ed.onDidBlurEditorText(save)
@@ -262,11 +268,22 @@ const CodeEditor = ({asset, host, language, onLanguage}) => {
             if (editor.current) {
                 save();
                 subs.forEach(s => s.dispose());
+                if (carets.current) carets.current.dispose();
+                carets.current = null;
                 editor.current.dispose();
                 editor.current = null;
             }
         };
-    }, [asset.id, version, language]);
+    }, [asset.id, language]);
+    React.useEffect(() => {
+        const ed = editor.current;
+        const model = ed && ed.getModel();
+        const text = host.text(asset);
+        if (!model || model.getValue() === text) return;
+        const sel = ed.getSelection();
+        model.pushEditOperations([], [{range: model.getFullModelRange(), text}], () => null);
+        if (sel) ed.setSelection(sel);
+    }, [version]);
     return (
         <div className={styles.codeBox} ref={box} />
     );
@@ -300,6 +317,14 @@ class PaintAssetEditorRaw extends React.Component {
         this.handleUpdateImage = this.handleUpdateImage.bind(this);
         this.handleUpdateName = this.handleUpdateName.bind(this);
         this.flush = this.flush.bind(this);
+        this.collabOn = this.collabOn.bind(this);
+        this.onRemotePaint = (payload, from) => runAsRemote(() => handleRemotePaintPacket(payload, from));
+    }
+    collabOn () {
+        if (this.gone) return;
+        installPaintCollab({targetId: `asset:${this.props.asset.id}`, costumeIndex: 0});
+        if (window.dimodCollab) window.dimodCollab.onPaintUpdate = this.onRemotePaint;
+        else window.addEventListener('dimod:collab-ready', this.collabOn, {once: true});
     }
     componentDidMount () {
         this.seen = this.props.host.bytes(this.props.asset);
@@ -332,6 +357,9 @@ class PaintAssetEditorRaw extends React.Component {
         twPaint.flushPaint();
         this.flush();
         twPaint.setPaintSuspended(true);
+        window.removeEventListener('dimod:collab-ready', this.collabOn);
+        if (window.dimodCollab && window.dimodCollab.onPaintUpdate === this.onRemotePaint) window.dimodCollab.onPaintUpdate = null;
+        uninstallPaintCollab();
     }
     async load () {
         const {asset, host} = this.props;
@@ -344,9 +372,12 @@ class PaintAssetEditorRaw extends React.Component {
         if (this.gone || this.props.asset !== asset) return;
         this.setState(s => ({status: 'ready', image, format: vector ? 'svg' : 'png', center: [width / 2, height / 2],
             version: s.version + 1}));
+        this.collabOn();
     }
     handleUpdateImage (isVector, image) {
-        this.pending = {isVector, image, asset: this.props.asset};
+        const remote = isApplyingRemotePaint();
+        if (this.pending && this.pending.remote !== remote) this.flush();
+        this.pending = {isVector, image, asset: this.props.asset, remote};
         clearTimeout(this.timer);
         this.timer = setTimeout(this.flush, 300);
     }
@@ -358,9 +389,12 @@ class PaintAssetEditorRaw extends React.Component {
         const {host} = this.props;
         const bytes = pending.isVector ? new TextEncoder().encode(pending.image) : await imageDataToPng(pending.image);
         if (!host.list.includes(pending.asset)) return;
-        setFormat(pending.asset, pending.isVector ? 'svg' : 'png', 'image');
-        this.own = bytes;
-        host.replace(pending.asset, bytes);
+        const put = () => {
+            setFormat(pending.asset, pending.isVector ? 'svg' : 'png', 'image');
+            this.own = bytes;
+            host.replace(pending.asset, bytes);
+        };
+        if (pending.remote) quietAssets(put); else put();
     }
     handleUpdateName (name) { this.props.host.rename(this.props.asset, name); }
     render () {

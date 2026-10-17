@@ -12,7 +12,6 @@ import LibraryComponent from '../components/library/library.jsx';
 import {assetBrowser, addDimodLibraryEntry} from '../lib/dimod-assets';
 import {showErrorToast} from '../lib/dimod-ui';
 import {uploadTab} from '../components/library/library-upload.jsx';
-import {broadcastTargetCreate} from '../lib/dimod-collab';
 
 const messages = defineMessages({
     libraryTitle: {
@@ -44,17 +43,11 @@ class SpriteLibrary extends React.PureComponent {
             return fetch(item.spriteFileUrl)
                 .then(res => res.arrayBuffer())
                 .then(buffer => this.props.vm.addSprite(buffer))
-                .then(() => {
-                    broadcastTargetCreate(this.props.vm);
-                    this.props.onActivateBlocksTab();
-                });
+                .then(() => this.props.onActivateBlocksTab());
         }
         // Randomize position of library sprite
         randomizeSpritePosition(item);
-        this.props.vm.addSprite(JSON.stringify(item)).then(() => {
-            broadcastTargetCreate(this.props.vm);
-            this.props.onActivateBlocksTab();
-        });
+        this.props.vm.addSprite(JSON.stringify(item)).then(() => this.props.onActivateBlocksTab());
     }
     render () {
         return (

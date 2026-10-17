@@ -219,10 +219,53 @@ const collectAssetNames = (node, into) => {
     for (const key of Object.keys(node)) collectAssetNames(node[key], into);
     return into;
 };
+const parsedJsonCache = new WeakMap();
+const parsedProjectJson = files => {
+    const json = files && files['project.json'];
+    if (!json) return null;
+    if (parsedJsonCache.has(json)) return parsedJsonCache.get(json);
+    let obj;
+    try { obj = JSON.parse(new TextDecoder().decode(json)); } catch (e) { obj = undefined; }
+    parsedJsonCache.set(json, obj);
+    return obj;
+};
+const refsCache = new WeakMap();
 const referencedAssetNames = files => {
     const json = files && files['project.json'];
     if (!json) return new Set();
-    try { return collectAssetNames(JSON.parse(new TextDecoder().decode(json)), new Set()); } catch (e) { return null; }
+    if (refsCache.has(json)) return refsCache.get(json);
+    const obj = parsedProjectJson(files);
+    const out = obj === undefined ? null : collectAssetNames(obj, new Set());
+    refsCache.set(json, out);
+    return out;
+};
+const jsonKeyOf = t => (t && t.isStage ? '\u0000stage' : `t:${t && t.name}`);
+const strCrc = str => crc32(new TextEncoder().encode(str));
+const jsonPatchFor = (files, base) => {
+    const obj = parsedProjectJson(files);
+    if (!obj || !Array.isArray(obj.targets) || !base) return null;
+    const order = obj.targets.map(jsonKeyOf);
+    if (new Set(order).size !== order.length) return null;
+    const set = {}, crcs = {};
+    const put = (k, v) => { const c = strCrc(JSON.stringify(v)); crcs[k] = c; if (base[k] !== c) set[k] = v; };
+    for (const k of Object.keys(obj)) if (k !== 'targets') put(`$${k}`, obj[k]);
+    obj.targets.forEach((t, i) => put(order[i], t));
+    const del = Object.keys(base).filter(k => !(k in crcs));
+    const was = {};
+    for (const k of Object.keys(set).concat(del)) was[k] = k in base ? base[k] : null;
+    return {patch: {set, del, base: was, order}, crcs, empty: Object.keys(set).length === 0 && del.length === 0};
+};
+const buildJsonDiff = (files, patch, changed, removed) => {
+    const out = {'__dimod_diff_manifest.json': new TextEncoder().encode(JSON.stringify({removed, changed, jp: 1})),
+        '__dimod_json_patch.json': new TextEncoder().encode(JSON.stringify(patch))};
+    for (const f of changed) out[f] = files[f];
+    return zipFiles(out);
+};
+const captureProjectFilesSync = vm => {
+    const raw = vm.saveProjectSb3DontZip();
+    const files = {};
+    for (const name of Object.keys(raw)) files[name] = toBytes(raw[name]);
+    return files;
 };
 const missingReferencedAssets = files => {
     const referenced = referencedAssetNames(files);
@@ -569,4 +612,4 @@ const listenToProjectChat = onMessage => {
         ws = null;
     };
 };
-export {DIT_ICON, attachEditClock, captureProjectFiles, confirmAndEnableCloud, decodeDimodToken, dimodDecryptProject, enableCloudProject, fetchProjectName, getCloudState, getDimodCustomLibrary, getDimodProjectId, getDimodToken, getDimodUserId, getDimodUsername, getLastLocalEditAt, getLocalEditSeq, getProjectThreadId, getSaveHealth, getSeeInsideId, getUnsavedEditCount, hasUnsavedLocalEdits, isApplyingRemote, isCloudProject, listenToProjectChat, loadCloudState, loadSeeInside, manifestFor, manifestsEqual, markLocalEdit, markSavedThrough, missingReferencedAssets, onCloudStateChange, projectCache, readZipManifest, referencedAssetNames, remixSeenProject, runAsRemote, saveProjectName, sendProjectChatMessage, setCloudPurchasePrompt, setSaveHealth, totalSize, touchRecentProject, whenCloudStateLoaded, zipFiles};
+export {DIT_ICON, attachEditClock, buildJsonDiff, captureProjectFiles, captureProjectFilesSync, jsonPatchFor, confirmAndEnableCloud, decodeDimodToken, dimodDecryptProject, enableCloudProject, fetchProjectName, getCloudState, getDimodCustomLibrary, getDimodProjectId, getDimodToken, getDimodUserId, getDimodUsername, getLastLocalEditAt, getLocalEditSeq, getProjectThreadId, getSaveHealth, getSeeInsideId, getUnsavedEditCount, hasUnsavedLocalEdits, isApplyingRemote, isCloudProject, listenToProjectChat, loadCloudState, loadSeeInside, manifestFor, manifestsEqual, markLocalEdit, markSavedThrough, missingReferencedAssets, onCloudStateChange, projectCache, readZipManifest, referencedAssetNames, remixSeenProject, runAsRemote, saveProjectName, sendProjectChatMessage, setCloudPurchasePrompt, setSaveHealth, totalSize, touchRecentProject, whenCloudStateLoaded, zipFiles};

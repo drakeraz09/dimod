@@ -2,6 +2,8 @@ import DOMPurify from 'dompurify';
 import {getDimodUserId} from './dimod-project';
 import Comment from 'scratch-vm/src/engine/comment';
 import log from './log.js';
+import {kindOfExt} from './dimod-scenes';
+import {CHANGED_EVENT as TILEMAPS_CHANGED, normalizeDoc as normalizeTileDoc} from './dimod-tilemaps.js';
 import {blocksRevision, tracksBlocksRevision, repairBlockGraph} from './dimod-vm.js';
 import styles from '../components/dimod-field-carets/dimod-field-carets.css';
 const CURSOR_COLORS = [
@@ -182,6 +184,22 @@ const lastLocalCostumeEdit = new Map();
 const editKey = (targetId, index) => `${targetId}:${index}`;
 const iWinConcurrentEdit = fromUserId =>
     String(getDimodUserId() || '') < String(fromUserId || '');
+const assetVers = new Map();
+const assetVerKey = (kind, targetId, name) => `${kind}:${targetId}:${name}`;
+const bumpAssetVer = key => {
+    const v = Math.max((assetVers.get(key) || 0) + 1, Date.now());
+    assetVers.set(key, v);
+    return v;
+};
+const remoteAssetIsOlder = (key, payload) => {
+    if (!Number.isFinite(payload.ver)) return false;
+    const mine = assetVers.get(key) || 0;
+    return payload.ver < mine || (payload.ver === mine &&
+        `${getDimodUserId() || ''}|${(window.dimodCollab && window.dimodCollab.tabId) || ''}` < `${payload.from || ''}|${payload.fromTab || ''}`);
+};
+const takeAssetVer = (key, payload) => {
+    if (Number.isFinite(payload.ver)) assetVers.set(key, Math.max(assetVers.get(key) || 0, payload.ver));
+};
 const uint8ToBase64 = bytes => {
     let binary = '';
     const chunkSize = 8192;
@@ -209,7 +227,7 @@ const bitmapDataUrlToImageData = dataUrl => new Promise((resolve, reject) => {
     img.onerror = reject;
     img.src = dataUrl;
 });
-const COSTUME_BROADCAST_DEBOUNCE_MS = 400;
+const COSTUME_BROADCAST_DEBOUNCE_MS = 150;
 let pendingCostumeBroadcast = null;
 const sendCostumeUpdate = ({base, isVector, image}) => {
     if (!window.dimodCollab) return;
@@ -239,6 +257,7 @@ const broadcastCostumeUpdate = (vm, costumeIndex, isVector, image, rotationCente
         targetId: target.id,
         costumeIndex,
         costumeName: costume ? costume.name : null,
+        ver: bumpAssetVer(assetVerKey('c', target.id, costume ? costume.name : costumeIndex)),
         rotationCenterX,
         rotationCenterY
     };
@@ -267,6 +286,16 @@ const deferBitmapUpdate = apply => {
     if (deferredBitmapTimer) return;
     deferredBitmapTimer = setTimeout(runDeferredBitmapUpdate, DEFERRED_BITMAP_POLL_MS);
 };
+let liveSvgTimer = null;
+const deferLiveSvg = apply => {
+    clearTimeout(liveSvgTimer);
+    const run = () => {
+        if (isPaintGestureActive()) { liveSvgTimer = setTimeout(run, DEFERRED_BITMAP_POLL_MS); return; }
+        liveSvgTimer = null;
+        apply();
+    };
+    liveSvgTimer = setTimeout(run, 150);
+};
 const applyCostumeUpdate = (vm, payload) => {
     const target = vm.runtime.getTargetById(payload.targetId);
     if (!target) return;
@@ -275,16 +304,35 @@ const applyCostumeUpdate = (vm, payload) => {
         payload.costumeIndex;
     if (index < 0 || index >= costumes.length) return;
     const costume = costumes[index];
-    const mineAt = lastLocalCostumeEdit.get(editKey(payload.targetId, index));
-    if (mineAt && Date.now() - mineAt < CONCURRENT_EDIT_WINDOW_MS && iWinConcurrentEdit(payload.from)) return;
+    const vkey = assetVerKey('c', payload.targetId, costume.name);
+    const stale = () => remoteAssetIsOlder(vkey, payload);
+    if (Number.isFinite(payload.ver)) {
+        if (stale()) return;
+    } else {
+        const mineAt = lastLocalCostumeEdit.get(editKey(payload.targetId, index));
+        if (mineAt && Date.now() - mineAt < CONCURRENT_EDIT_WINDOW_MS && iWinConcurrentEdit(payload.from)) return;
+    }
     if (payload.isVector) {
-        if (isLivePaintCostume(payload.targetId, index)) return;
+        if (isLivePaintCostume(payload.targetId, index)) {
+            deferLiveSvg(() => {
+                if (stale() || target.getCostumes()[index] !== costume) return;
+                takeAssetVer(vkey, payload);
+                if (Math.abs(costume.rotationCenterX - payload.rotationCenterX) < 0.01 &&
+                    Math.abs(costume.rotationCenterY - payload.rotationCenterY) < 0.01) return;
+                remotely(() => vm._updateSvg(costume, payload.image, payload.rotationCenterX, payload.rotationCenterY));
+                notifyCostumeUpdated(payload.targetId, index);
+            });
+            return;
+        }
+        takeAssetVer(vkey, payload);
         vm._updateSvg(costume, payload.image, payload.rotationCenterX, payload.rotationCenterY);
         notifyCostumeUpdated(payload.targetId, index);
         return;
     }
     return bitmapDataUrlToImageData(payload.image).then(imageData => {
         const apply = () => {
+            if (stale() || target.getCostumes()[index] !== costume) return;
+            takeAssetVer(vkey, payload);
             vm._updateBitmap(costume, imageData, payload.rotationCenterX, payload.rotationCenterY, 2);
             notifyCostumeUpdated(payload.targetId, index);
         };
@@ -302,6 +350,7 @@ const broadcastSoundUpdate = (vm, soundIndex, wavBytes) => {
         targetId: target.id,
         soundIndex,
         soundName: sound ? sound.name : null,
+        ver: bumpAssetVer(assetVerKey('s', target.id, sound ? sound.name : soundIndex)),
         wav: uint8ToBase64(wavBytes)
     });
 };
@@ -311,10 +360,14 @@ const applySoundUpdate = (vm, payload) => {
     const sounds = target.sprite.sounds;
     const index = payload.soundName ? sounds.findIndex(s => s.name === payload.soundName) : payload.soundIndex;
     if (index < 0 || index >= sounds.length) return;
+    const vkey = assetVerKey('s', payload.targetId, sounds[index].name);
+    if (remoteAssetIsOlder(vkey, payload)) return;
     const wavBytes = base64ToUint8(payload.wav);
     const audioContext = vm.runtime.audioEngine.audioContext;
     return audioContext.decodeAudioData(wavBytes.buffer.slice(0)).then(audioBuffer => {
         const sound = sounds[index];
+        if (!sound || remoteAssetIsOlder(vkey, payload)) return;
+        takeAssetVer(vkey, payload);
         if (sound && sound.broken) delete sound.broken;
         const soundId = sound ? sound.soundId : null;
         if (soundId && vm.runtime.audioEngine) { target.sprite.soundBank.getSoundPlayer(soundId).buffer = audioBuffer; }
@@ -329,25 +382,75 @@ const applySoundUpdate = (vm, payload) => {
         vm.emitTargetsUpdate();
     });
 };
-const broadcastCostumeAdd = (vm, targetId, atIndex) => {
-    if (!window.dimodCollab) return;
-    const target = vm.runtime.getTargetById(targetId);
+let clock = 0;
+const tick = () => { clock = Math.max(clock + 1, Date.now()); return clock; };
+const newStamp = () => ({v: tick(), who: `${getDimodUserId() || ''}|${(window.dimodCollab && window.dimodCollab.tabId) || ''}`});
+const seeStamp = s => {
+    if (!s || !Number.isFinite(s.v) || typeof s.who !== 'string' || s.who.length > 200) return null;
+    if (s.v > clock) clock = s.v;
+    return {v: s.v, who: s.who};
+};
+const later = (a, b) => !!a && (!b || a.v > b.v || (a.v === b.v && a.who > b.who));
+const addStamps = new WeakMap();
+const nameStamps = new WeakMap();
+const sentNames = new WeakMap();
+const orderStamps = new Map();
+const goneAssets = new WeakSet();
+const listOf = (target, kind) => (kind === 'costume' ? target.getCostumes() : target.sprite.sounds);
+const uids = new WeakMap();
+const freshUid = () => `${tick().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const uidOf = o => (o ? uids.get(o) || null : null);
+const tagAssets = target => {
+    [target.getCostumes(), target.sprite.sounds].forEach(list => list.forEach(o => {
+        if (!uids.has(o)) uids.set(o, `${target.id}:${o.name}`);
+    }));
+};
+const findItem = (list, name, uid) => {
+    const i = typeof uid === 'string' ? list.findIndex(o => uids.get(o) === uid) : -1;
+    return i !== -1 ? i : list.findIndex(o => o.name === name);
+};
+const broadcastAssetAdd = (vm, targetId, atIndex, kind) => {
+    const target = window.dimodCollab && vm.runtime.getTargetById(targetId);
     if (!target) return;
-    const costumes = target.getCostumes();
-    const index = typeof atIndex === 'number' ? atIndex : costumes.length - 1;
-    const costume = costumes[index];
-    if (!costume || !costume.asset) return;
-    window.dimodCollab.sendAssetUpdate({
-        kind: 'costume-add',
-        targetId,
-        insertIndex: index,
-        name: costume.name,
-        dataFormat: costume.dataFormat,
-        rotationCenterX: costume.rotationCenterX,
-        rotationCenterY: costume.rotationCenterY,
-        bitmapResolution: costume.bitmapResolution,
-        data: uint8ToBase64(costume.asset.data)
-    });
+    const list = listOf(target, kind);
+    const index = typeof atIndex === 'number' ? atIndex : list.length - 1;
+    const o = list[index];
+    if (!o || !o.asset) return;
+    const stamp = newStamp();
+    addStamps.set(o, stamp);
+    uids.set(o, freshUid());
+    const base = {kind: `${kind}-add`, targetId, insertIndex: index, after: index > 0 ? list[index - 1].name : null, stamp, uid: uidOf(o),
+        name: o.name, dataFormat: o.dataFormat, data: uint8ToBase64(o.asset.data)};
+    window.dimodCollab.sendAssetUpdate(kind === 'costume' ?
+        {...base, rotationCenterX: o.rotationCenterX, rotationCenterY: o.rotationCenterY, bitmapResolution: o.bitmapResolution} :
+        {...base, rate: o.rate, sampleCount: o.sampleCount});
+};
+const broadcastCostumeAdd = (vm, targetId, atIndex) => broadcastAssetAdd(vm, targetId, atIndex, 'costume');
+const broadcastSoundAdd = (vm, targetId, atIndex) => broadcastAssetAdd(vm, targetId, atIndex, 'sound');
+const placeNew = (vm, target, kind, payload) => {
+    const list = listOf(target, kind);
+    const o = list[list.length - 1];
+    const s = seeStamp(payload.stamp);
+    if (s) addStamps.set(o, s);
+    if (typeof payload.uid === 'string' && payload.uid.length < 200) uids.set(o, payload.uid);
+    const rest = list.slice(0, -1);
+    const clash = o.name !== payload.name && rest.find(x => x.name === payload.name);
+    if (clash && later(s, addStamps.get(clash))) {
+        clash.name = o.name;
+        o.name = payload.name;
+        sentNames.set(clash, clash.name);
+        sentNames.set(o, o.name);
+    }
+    const fallback = Number.isInteger(payload.insertIndex) ? Math.max(0, Math.min(payload.insertIndex, rest.length)) : rest.length;
+    let pos = fallback;
+    if (payload.after === null || typeof payload.after === 'string') {
+        const anchor = payload.after === null ? -1 : rest.findIndex(x => x.name === payload.after);
+        pos = payload.after !== null && anchor === -1 ? fallback : anchor + 1;
+        if (s) while (pos < rest.length && later(addStamps.get(rest[pos]), s)) pos++;
+    }
+    if (pos === rest.length) return;
+    rest.splice(pos, 0, o);
+    setAssetOrder(vm, target, kind, rest);
 };
 const applyCostumeAdd = (vm, payload) => {
     const target = vm.runtime.getTargetById(payload.targetId);
@@ -372,34 +475,12 @@ const applyCostumeAdd = (vm, payload) => {
         bitmapResolution: payload.bitmapResolution
     };
     const previous = target.getCostumes()[target.currentCostume];
-    return vm.addCostume(`${asset.assetId}.${asset.dataFormat}`, costumeObject, payload.targetId).then(() => {
-        const endIndex = target.getCostumes().length - 1;
-        if (typeof payload.insertIndex === 'number' && payload.insertIndex !== endIndex) {
-            vm.reorderCostume(payload.targetId, endIndex, payload.insertIndex);
-        }
+    return vm.addCostume(`${asset.assetId}.${asset.dataFormat}`, costumeObject, payload.targetId).then(() => remotely(() => {
+        placeNew(vm, target, 'costume', payload);
         const back = previous ? target.getCostumes().indexOf(previous) : -1;
         if (back !== -1 && back !== target.currentCostume) target.setCostume(back);
         vm.emitTargetsUpdate();
-    });
-};
-const broadcastSoundAdd = (vm, targetId, atIndex) => {
-    if (!window.dimodCollab) return;
-    const target = vm.runtime.getTargetById(targetId);
-    if (!target) return;
-    const sounds = target.sprite.sounds;
-    const index = typeof atIndex === 'number' ? atIndex : sounds.length - 1;
-    const sound = sounds[index];
-    if (!sound || !sound.asset) return;
-    window.dimodCollab.sendAssetUpdate({
-        kind: 'sound-add',
-        targetId,
-        insertIndex: index,
-        name: sound.name,
-        dataFormat: sound.dataFormat,
-        rate: sound.rate,
-        sampleCount: sound.sampleCount,
-        data: uint8ToBase64(sound.asset.data)
-    });
+    }));
 };
 const applySoundAdd = (vm, payload) => {
     const target = vm.runtime.getTargetById(payload.targetId);
@@ -422,58 +503,53 @@ const applySoundAdd = (vm, payload) => {
         rate: payload.rate,
         sampleCount: payload.sampleCount
     };
-    return vm.addSound(soundObject, payload.targetId).then(() => {
-        const endIndex = target.sprite.sounds.length - 1;
-        if (typeof payload.insertIndex === 'number' && payload.insertIndex !== endIndex) {
-            vm.reorderSound(payload.targetId, endIndex, payload.insertIndex);
-            vm.emitTargetsUpdate();
-        }
-    });
+    return vm.addSound(soundObject, payload.targetId).then(() => remotely(() => placeNew(vm, target, 'sound', payload)));
 };
-const broadcastCostumeDelete = (vm, targetId, index, name) => {
+const broadcastCostumeDelete = (vm, targetId, index, name, o) => {
     if (!window.dimodCollab) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'costume-delete', targetId, index, name});
+    window.dimodCollab.sendAssetUpdate({kind: 'costume-delete', targetId, index, name, uid: uidOf(o)});
 };
-const applyCostumeDelete = (vm, payload) => {
+const broadcastSoundDelete = (vm, targetId, index, name, o) => {
+    if (!window.dimodCollab) return;
+    window.dimodCollab.sendAssetUpdate({kind: 'sound-delete', targetId, index, name, uid: uidOf(o)});
+};
+const applyAssetDelete = (vm, payload, kind) => {
     const target = vm.runtime.getTargetById(payload.targetId);
     if (!target) return;
-    const costumes = target.getCostumes();
-    const index = costumes.findIndex(c => c.name === payload.name);
+    const list = listOf(target, kind);
+    const index = findItem(list, payload.name, payload.uid);
     if (index === -1) return;
-    target.deleteCostume(index);
+    goneAssets.add(list[index]);
+    if (kind === 'costume') target.deleteCostume(index);
+    else target.deleteSound(index);
     vm.emitTargetsUpdate();
 };
-const broadcastSoundDelete = (vm, targetId, index, name) => {
-    if (!window.dimodCollab) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'sound-delete', targetId, index, name});
+const applyCostumeDelete = (vm, payload) => applyAssetDelete(vm, payload, 'costume');
+const applySoundDelete = (vm, payload) => applyAssetDelete(vm, payload, 'sound');
+const moveItem = (list, from, to) => {
+    const arr = list.slice();
+    if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || from >= arr.length) return arr;
+    const [o] = arr.splice(from, 1);
+    arr.splice(Math.max(0, Math.min(to, arr.length)), 0, o);
+    return arr;
 };
-const applySoundDelete = (vm, payload) => {
+const applyIndexReorder = (vm, payload, kind) => {
     const target = vm.runtime.getTargetById(payload.targetId);
     if (!target) return;
-    const sounds = target.sprite.sounds;
-    const index = sounds.findIndex(s => s.name === payload.name);
-    if (index === -1) return;
-    target.deleteSound(index);
-    vm.emitTargetsUpdate();
+    setAssetOrder(vm, target, kind, moveItem(listOf(target, kind), payload.index, payload.newIndex));
 };
-const broadcastCostumeReorder = (vm, targetId, index, newIndex) => {
-    if (!window.dimodCollab) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'costume-reorder', targetId, index, newIndex});
-};
-const applyCostumeReorder = (vm, payload) => {
-    vm.reorderCostume(payload.targetId, payload.index, payload.newIndex);
-    vm.emitTargetsUpdate();
-};
-const broadcastCostumeOrder = (vm, targetId) => {
+const applyCostumeReorder = (vm, payload) => applyIndexReorder(vm, payload, 'costume');
+const applySoundReorder = (vm, payload) => applyIndexReorder(vm, payload, 'sound');
+const broadcastOrder = (vm, targetId, kind) => {
     const target = window.dimodCollab && vm.runtime.getTargetById(targetId);
     if (!target) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'costume-order', targetId, names: target.getCostumes().map(c => c.name)});
+    const stamp = newStamp();
+    orderStamps.set(`${kind}:${targetId}`, stamp);
+    const list = listOf(target, kind);
+    window.dimodCollab.sendAssetUpdate({kind: `${kind}-order`, targetId, names: list.map(o => o.name), uids: list.map(uidOf), stamp});
 };
-const broadcastSoundOrder = (vm, targetId) => {
-    const target = window.dimodCollab && vm.runtime.getTargetById(targetId);
-    if (!target) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'sound-order', targetId, names: target.sprite.sounds.map(s => s.name)});
-};
+const broadcastCostumeOrder = (vm, targetId) => broadcastOrder(vm, targetId, 'costume');
+const broadcastSoundOrder = (vm, targetId) => broadcastOrder(vm, targetId, 'sound');
 const setAssetOrder = (vm, target, kind, objs) => {
     if (kind === 'costume') {
         const current = target.getCurrentCostume();
@@ -486,49 +562,52 @@ const setAssetOrder = (vm, target, kind, objs) => {
 const applyNameOrder = (vm, payload, kind) => {
     const target = vm.runtime.getTargetById(payload.targetId);
     if (!target || !Array.isArray(payload.names) || payload.names.length > 5000) return;
-    const list = kind === 'costume' ? target.getCostumes() : target.sprite.sounds;
-    const wanted = payload.names.filter(n => typeof n === 'string');
+    const key = `${kind}:${payload.targetId}`;
+    const s = seeStamp(payload.stamp);
+    if (s && orderStamps.has(key) && !later(s, orderStamps.get(key))) return;
+    if (s) orderStamps.set(key, s);
+    const list = listOf(target, kind);
     const byName = new Map(list.map(o => [o.name, o]));
-    const final = wanted.map(n => byName.get(n)).filter(Boolean);
+    const byUid = new Map(list.map(o => [uidOf(o), o]));
+    const final = [];
+    payload.names.forEach((n, i) => {
+        const u = Array.isArray(payload.uids) ? payload.uids[i] : null;
+        const o = (typeof u === 'string' && byUid.get(u)) || (typeof n === 'string' && byName.get(n));
+        if (o && !final.includes(o)) final.push(o);
+    });
     list.forEach(o => {
         if (!final.includes(o)) final.push(o);
     });
     setAssetOrder(vm, target, kind, final);
 };
-const broadcastSoundReorder = (vm, targetId, index, newIndex) => {
+const broadcastAssetRename = (vm, targetId, index, oldName, newName, o, kind) => {
     if (!window.dimodCollab) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'sound-reorder', targetId, index, newIndex});
+    const stamp = newStamp();
+    if (o) {
+        nameStamps.set(o, stamp);
+        sentNames.set(o, newName);
+    }
+    window.dimodCollab.sendAssetUpdate({kind: `${kind}-rename`, targetId, index, oldName, newName, stamp, uid: uidOf(o)});
 };
-const applySoundReorder = (vm, payload) => {
-    vm.reorderSound(payload.targetId, payload.index, payload.newIndex);
-    vm.emitTargetsUpdate();
-};
-const broadcastCostumeRename = (vm, targetId, index, oldName, newName) => {
-    if (!window.dimodCollab) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'costume-rename', targetId, index, oldName, newName});
-};
-const applyCostumeRename = (vm, payload) => {
+const broadcastCostumeRename = (vm, targetId, index, oldName, newName, o) => broadcastAssetRename(vm, targetId, index, oldName, newName, o, 'costume');
+const broadcastSoundRename = (vm, targetId, index, oldName, newName, o) => broadcastAssetRename(vm, targetId, index, oldName, newName, o, 'sound');
+const applyAssetRename = (vm, payload, kind) => {
     const target = vm.runtime.getTargetById(payload.targetId);
-    if (!target) return;
-    const costumes = target.getCostumes();
-    const index = costumes.findIndex(c => c.name === payload.oldName);
+    if (!target || !isValidAssetName(payload.newName)) return;
+    const list = listOf(target, kind);
+    const index = findItem(list, payload.oldName, payload.uid);
     if (index === -1) return;
-    target.renameCostume(index, payload.newName);
+    const o = list[index];
+    const s = seeStamp(payload.stamp);
+    if (o.name !== payload.oldName && !later(s, nameStamps.get(o))) return;
+    if (s) nameStamps.set(o, s);
+    if (kind === 'costume') target.renameCostume(index, payload.newName);
+    else target.renameSound(index, payload.newName);
+    sentNames.set(o, o.name);
     vm.emitTargetsUpdate();
 };
-const broadcastSoundRename = (vm, targetId, index, oldName, newName) => {
-    if (!window.dimodCollab) return;
-    window.dimodCollab.sendAssetUpdate({kind: 'sound-rename', targetId, index, oldName, newName});
-};
-const applySoundRename = (vm, payload) => {
-    const target = vm.runtime.getTargetById(payload.targetId);
-    if (!target) return;
-    const sounds = target.sprite.sounds;
-    const index = sounds.findIndex(s => s.name === payload.oldName);
-    if (index === -1) return;
-    target.renameSound(index, payload.newName);
-    vm.emitTargetsUpdate();
-};
+const applyCostumeRename = (vm, payload) => applyAssetRename(vm, payload, 'costume');
+const applySoundRename = (vm, payload) => applyAssetRename(vm, payload, 'sound');
 const remoteEdited = new Map();
 const remoteKey = (targetId, kind) => `${targetId}|${kind}`;
 const getRemoteEditedNames = (targetId, kind) => remoteEdited.get(remoteKey(targetId, kind)) || null;
@@ -549,7 +628,54 @@ const noteRemoteEdit = payload => {
     set.add(name);
     window.dispatchEvent(new CustomEvent('dimod:remote-asset-edit'));
 };
-const applyRemoteAssetUpdate = (vm, payload) => {
+const FONT_FORMATS = new Set(['ttf', 'otf', 'woff', 'woff2']);
+const applyFontAdd = (vm, payload) => {
+    const fm = vm.runtime.fontManager;
+    if (!fm || typeof payload.family !== 'string' || !fm.isValidFamily(payload.family) || fm.hasFont(payload.family) ||
+        typeof payload.fallback !== 'string' || payload.fallback.length > 200) return;
+    if (payload.system) return fm.addSystemFont(payload.family, payload.fallback);
+    if (!FONT_FORMATS.has(payload.dataFormat) || !isValidAssetData(payload.data)) return;
+    const storage = vm.runtime.storage;
+    const asset = storage.createAsset(storage.AssetType.Font, payload.dataFormat, base64ToUint8(payload.data), null, true);
+    fm.addCustomFont(payload.family, payload.fallback, asset);
+};
+const applyFontDelete = (vm, payload) => {
+    const fm = vm.runtime.fontManager;
+    const index = fm ? fm.fonts.findIndex(f => f.family === payload.family) : -1;
+    if (index !== -1) fm.deleteFont(index);
+};
+const applyTileMaps = (vm, payload) => {
+    if (typeof payload.doc !== 'string' || payload.doc.length > MAX_ASSET_BASE64_CHARS || remoteAssetIsOlder('tilemaps', payload)) return;
+    let raw;
+    try { raw = JSON.parse(payload.doc); } catch (e) { return; }
+    takeAssetVer('tilemaps', payload);
+    vm.runtime.dimodTileMaps = normalizeTileDoc(raw);
+    vm.runtime.emit(TILEMAPS_CHANGED, {});
+    vm.runtime.emitProjectChanged();
+};
+let tileTimer = 0;
+const broadcastTileMaps = vm => {
+    if (!window.dimodCollab || isQuiet(vm)) return;
+    const ver = bumpAssetVer('tilemaps');
+    clearTimeout(tileTimer);
+    tileTimer = setTimeout(() => {
+        const doc = vm.runtime.dimodTileMaps;
+        if (window.dimodCollab && doc) window.dimodCollab.sendAssetUpdate({kind: 'tilemaps', ver, doc: JSON.stringify(doc)});
+    }, 120);
+};
+let syncRemote = 0;
+const remotely = fn => {
+    syncRemote++;
+    try { return fn(); } finally { syncRemote--; }
+};
+let remoteChain = Promise.resolve();
+const queued = fn => {
+    const run = () => remotely(fn);
+    remoteChain = remoteChain.then(run, run);
+    return remoteChain;
+};
+const applyRemoteAssetUpdate = (vm, payload) => queued(() => applyAssetNow(vm, payload));
+const applyAssetNow = (vm, payload) => {
     noteRemoteEdit(payload);
     switch (payload.kind) {
     case 'costume': return applyCostumeUpdate(vm, payload);
@@ -564,6 +690,9 @@ const applyRemoteAssetUpdate = (vm, payload) => {
     case 'costume-order': return applyNameOrder(vm, payload, 'costume');
     case 'sound-order': return applyNameOrder(vm, payload, 'sound');
     case 'sound-reorder': return applySoundReorder(vm, payload);
+    case 'font-add': return applyFontAdd(vm, payload);
+    case 'font-delete': return applyFontDelete(vm, payload);
+    case 'tilemaps': return applyTileMaps(vm, payload);
     default: return null;
     }
 };
@@ -1125,13 +1254,19 @@ const installGestureRecovery = ScratchBlocks => {
         return originalGetGesture.call(this, e);
     };
 };
-const broadcastTargetCreate = vm => {
-    if (!window.dimodCollab) return;
-    const target = vm.editingTarget;
+const targetStamps = new Map();
+const broadcastTargetCreate = (vm, targetId = vm.editingTarget && vm.editingTarget.id) => {
+    const target = window.dimodCollab && targetId && vm.runtime.getTargetById(targetId);
     if (!target) return;
-    vm.exportSprite(target.id, 'base64').then(base64 => {
+    const stamp = newStamp();
+    targetStamps.set(targetId, stamp);
+    const name = target.getName();
+    const list = originals(vm);
+    const prev = list[list.indexOf(target) - 1];
+    const after = prev ? prev.id : null;
+    vm.exportSprite(targetId, 'base64').then(base64 => {
         if (!window.dimodCollab) return;
-        window.dimodCollab.sendTargetCreate({targetId: target.id, sprite: base64});
+        window.dimodCollab.sendTargetCreate({targetId, sprite: base64, name, stamp, after});
     });
 };
 const base64ToArrayBuffer = base64 => {
@@ -1140,49 +1275,127 @@ const base64ToArrayBuffer = base64 => {
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes.buffer;
 };
-const applyRemoteTargetCreate = (vm, payload) => {
-    if (vm.runtime.getTargetById(payload.targetId)) return;
-    const previousTargetId = vm.editingTarget ? vm.editingTarget.id : null;
-    vm.dimodRemoteTargetCreates = (vm.dimodRemoteTargetCreates || 0) + 1;
-    const done = () => { vm.dimodRemoteTargetCreates -= 1; };
-    return vm.addSprite(base64ToArrayBuffer(payload.sprite)).then(() => {
-        if (previousTargetId && vm.editingTarget && vm.editingTarget.id !== previousTargetId &&
-            vm.runtime.getTargetById(previousTargetId)) { vm.setEditingTarget(previousTargetId); }
-        done();
-    }, err => { done(); throw err; });
+const patchFor = (obj, key, make) => {
+    const own = Object.prototype.hasOwnProperty.call(obj, key);
+    const orig = obj[key];
+    obj[key] = make(orig);
+    return () => {
+        if (own) obj[key] = orig;
+        else delete obj[key];
+    };
 };
+const applyRemoteTargetCreate = (vm, payload) => queued(() => {
+    if (vm.runtime.getTargetById(payload.targetId)) return;
+    const previous = vm.editingTarget;
+    const runtime = vm.runtime;
+    let hold = false;
+    let held = false;
+    vm.dimodRemoteTargetCreates = (vm.dimodRemoteTargetCreates || 0) + 1;
+    const unAdd = patchFor(runtime, 'addTarget', orig => function (...a) {
+        if (!hold) {
+            hold = true;
+            Promise.resolve().then(() => { hold = false; });
+        }
+        return orig.apply(this, a);
+    });
+    const unEmit = patchFor(vm, 'emitWorkspaceUpdate', orig => function (...a) {
+        if (hold && previous && vm.editingTarget && vm.editingTarget.id === payload.targetId) {
+            held = true;
+            return;
+        }
+        return orig.apply(this, a);
+    });
+    const done = () => {
+        vm.dimodRemoteTargetCreates -= 1;
+        unAdd();
+        unEmit();
+    };
+    return vm.addSprite(base64ToArrayBuffer(payload.sprite)).then(() => {
+        done();
+        const mine = runtime.getTargetById(payload.targetId);
+        const s = seeStamp(payload.stamp);
+        if (s) targetStamps.set(payload.targetId, s);
+        const clash = mine && typeof payload.name === 'string' && mine.getName() !== payload.name &&
+            originals(vm).find(t => t !== mine && t.getName() === payload.name);
+        if (mine && typeof payload.after === 'string') {
+            const arr = runtime.targets.filter(t => t !== mine);
+            let pos = arr.findIndex(t => t.id === payload.after);
+            if (pos !== -1) {
+                pos++;
+                while (pos < arr.length && later(targetStamps.get(arr[pos].id), s)) pos++;
+                if (pos < arr.length) {
+                    arr.splice(pos, 0, mine);
+                    runtime.targets = arr;
+                    vm.emitTargetsUpdate(false);
+                }
+            }
+        }
+        if (clash && later(s, targetStamps.get(clash.id))) {
+            remotely(() => {
+                const theirs = mine.getName();
+                vm.renameSprite(clash.id, `${theirs}-swap`);
+                vm.renameSprite(mine.id, payload.name);
+                vm.renameSprite(clash.id, theirs);
+            });
+        }
+        const onNew = vm.editingTarget && vm.editingTarget.id === payload.targetId;
+        if (onNew && previous && runtime.getTargetById(previous.id)) {
+            if (held) {
+                vm.editingTarget = previous;
+                runtime.setEditingTarget(previous);
+                vm.emitTargetsUpdate(false);
+            } else { vm.setEditingTarget(previous.id); }
+        } else if (held) { vm.emitWorkspaceUpdate(); }
+    }, err => { done(); throw err; });
+});
 const broadcastTargetRename = (vm, targetId, newName) => {
     if (!window.dimodCollab) return;
     window.dimodCollab.sendTargetRename({targetId, name: newName});
 };
-const applyRemoteTargetRename = (vm, payload) => {
+const applyRemoteTargetRename = (vm, payload) => queued(() => {
     const target = vm.runtime.getTargetById(payload.targetId);
     if (!target || target.getName() === payload.name) return;
     vm.renameSprite(payload.targetId, payload.name);
-};
+});
 const broadcastTargetDelete = targetId => {
     if (!window.dimodCollab) return;
     window.dimodCollab.sendTargetDelete({targetId});
 };
-const applyRemoteTargetDelete = (vm, payload) => {
+const applyRemoteTargetDelete = (vm, payload) => queued(() => {
     const target = vm.runtime.getTargetById(payload.targetId);
     if (!target || !target.isSprite()) return;
     vm.deleteSprite(payload.targetId);
-};
-const broadcastTargetReorder = (index, newIndex, targetId) => {
+});
+const broadcastTargetReorder = (index, newIndex, targetId, order) => {
     if (!window.dimodCollab) return;
-    window.dimodCollab.sendTargetReorder({index, newIndex, targetId});
+    window.dimodCollab.sendTargetReorder({index, newIndex, targetId, order});
 };
-const applyRemoteTargetReorder = (vm, payload) => {
+const applyRemoteTargetReorder = (vm, payload) => queued(() => {
+    if (Array.isArray(payload.order) && payload.order.length < 5000) {
+        const rank = new Map(payload.order.map((id, i) => [id, i]));
+        const ranked = vm.runtime.targets.filter(t => rank.has(t.id)).sort((a, b) => rank.get(a.id) - rank.get(b.id));
+        let k = 0;
+        vm.runtime.targets = vm.runtime.targets.map(t => (rank.has(t.id) ? ranked[k++] : t));
+        vm.emitTargetsUpdate();
+        return;
+    }
     let index = payload.index;
     if (payload.targetId) {
         index = vm.runtime.targets.findIndex(t => t.id === payload.targetId);
         if (index === -1) return;
     }
-    vm.reorderTarget(index, payload.newIndex);
-};
+    if (!Number.isInteger(payload.newIndex)) return;
+    const stageFirst = vm.runtime.targets[0] && vm.runtime.targets[0].isStage ? 1 : 0;
+    vm.runtime.targets = moveItem(vm.runtime.targets, index, Math.max(stageFirst, payload.newIndex));
+    vm.emitTargetsUpdate();
+});
 const shareBlocksToTargetWithSync = (vm, blocks, targetId, optFromTargetId) => {
     const target = vm.runtime.getTargetById(targetId);
+    blocks.forEach(b => {
+        if (!b.topLevel) return;
+        if (Number.isFinite(b.x)) b.x = Math.round(b.x);
+        if (Number.isFinite(b.y)) b.y = Math.round(b.y);
+    });
     const beforeIds = target ? new Set(Object.keys(target.blocks._blocks)) : null;
     return vm.shareBlocksToTarget(blocks, targetId, optFromTargetId).then(() => {
         if (!target || !beforeIds || !window.dimodCollab) return;
@@ -1212,6 +1425,161 @@ const applyRemoteBlocksShared = (vm, payload) => {
             }, 1500);
         });
     }
+};
+const sentAssets = new WeakSet();
+const sentTargets = new Set();
+const seenTargets = new Set();
+let opDepth = 0;
+const isQuiet = vm => syncRemote > 0 || !!(vm.runtime.sequencer && vm.runtime.sequencer.activeThread);
+const originals = vm => vm.runtime.targets.filter(t => t.isOriginal);
+const snapAll = vm => new Map(originals(vm).map(t => [t.id, {name: t.getName(), seen: seenTargets.has(t.id), c: t.getCostumes().slice(),
+    s: t.sprite.sounds.slice(), cn: t.getCostumes().map(x => x.name), sn: t.sprite.sounds.map(x => x.name)}]));
+const ASSET_SENDERS = {
+    costume: [broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeRename, broadcastCostumeOrder],
+    sound: [broadcastSoundAdd, broadcastSoundDelete, broadcastSoundRename, broadcastSoundOrder]
+};
+const diffList = (vm, id, kind, was, names, now, quiet) => {
+    const [add, del, ren, order] = ASSET_SENDERS[kind];
+    now.forEach((o, i) => {
+        if (was.includes(o) || sentAssets.has(o)) return;
+        sentAssets.add(o);
+        goneAssets.delete(o);
+        sentNames.set(o, o.name);
+        if (!quiet) add(vm, id, i);
+    });
+    was.forEach((o, i) => {
+        if (!now.includes(o)) {
+            sentAssets.delete(o);
+            if (!quiet && !goneAssets.has(o)) del(vm, id, i, names[i], o);
+            goneAssets.add(o);
+        } else if (o.name !== names[i] && sentNames.get(o) !== o.name) {
+            if (quiet) sentNames.set(o, o.name);
+            else ren(vm, id, i, names[i], o.name, o);
+        }
+    });
+    if (quiet) return;
+    const a = was.filter(o => now.includes(o));
+    const b = now.filter(o => was.includes(o));
+    if (a.some((o, i) => o !== b[i])) order(vm, id);
+};
+const afterOp = (vm, before, quiet) => {
+    originals(vm).forEach(t => {
+        const w = before.get(t.id);
+        if (!w) {
+            if (sentTargets.has(t.id)) return;
+            sentTargets.add(t.id);
+            t.getCostumes().forEach(o => sentAssets.add(o));
+            t.sprite.sounds.forEach(o => sentAssets.add(o));
+            if (!quiet) broadcastTargetCreate(vm, t.id);
+            return;
+        }
+        if (!quiet && w.seen && t.getName() !== w.name) broadcastTargetRename(vm, t.id, t.getName());
+        diffList(vm, t.id, 'costume', w.c, w.cn, t.getCostumes(), quiet);
+        diffList(vm, t.id, 'sound', w.s, w.sn, t.sprite.sounds, quiet);
+    });
+    before.forEach((w, id) => {
+        if (vm.runtime.getTargetById(id)) return;
+        sentTargets.delete(id);
+        seenTargets.delete(id);
+        if (!quiet) broadcastTargetDelete(id);
+    });
+    originals(vm).forEach(t => seenTargets.add(t.id));
+};
+const track = (vm, fn) => {
+    if (opDepth || vm.__dimodProjectFullyLoaded === false) return fn();
+    const quiet = isQuiet(vm);
+    const before = snapAll(vm);
+    opDepth++;
+    let r;
+    try { r = fn(); } finally { opDepth--; }
+    const done = () => afterOp(vm, before, quiet);
+    if (r && typeof r.then === 'function') {
+        r.then(done, done);
+        return r;
+    }
+    done();
+    if (typeof r === 'function') return (...a) => track(vm, () => r(...a));
+    return r;
+};
+const TRACKED_OPS = ['addSprite', 'duplicateSprite', 'deleteSprite', 'renameSprite', 'addCostume', 'addBackdrop',
+    'duplicateCostume', 'deleteCostume', 'renameCostume', 'reorderCostume', 'shareCostumeToTarget', 'addSound',
+    'duplicateSound', 'deleteSound', 'renameSound', 'reorderSound', 'shareSoundToTarget'];
+const installCollabHooks = vm => {
+    if (vm.dimodCollabHooks) return;
+    vm.dimodCollabHooks = true;
+    vm.dimodNoSync = remotely;
+    const seed = () => originals(vm).forEach(t => {
+        seenTargets.add(t.id);
+        tagAssets(t);
+    });
+    seed();
+    vm.runtime.on('PROJECT_LOADED', seed);
+    vm.on('targetsUpdate', seed);
+    const late = name => {
+        const own = Object.prototype.hasOwnProperty.call(vm, name) ? vm[name] : null;
+        return (...args) => (own || Object.getPrototypeOf(vm)[name]).apply(vm, args);
+    };
+    TRACKED_OPS.forEach(name => {
+        const orig = late(name);
+        vm[name] = (...args) => track(vm, () => orig(...args));
+    });
+    const reorderTarget = late('reorderTarget');
+    vm.reorderTarget = (index, newIndex) => {
+        const moved = vm.runtime.targets[index];
+        const r = reorderTarget(index, newIndex);
+        if (r && moved && !isQuiet(vm)) broadcastTargetReorder(index, newIndex, moved.id, vm.runtime.targets.map(t => t.id));
+        return r;
+    };
+    const updateSvg = late('updateSvg');
+    vm.updateSvg = (i, svg, x, y) => {
+        const r = updateSvg(i, svg, x, y);
+        if (!isQuiet(vm)) broadcastCostumeUpdate(vm, i, true, svg, x, y);
+        return r;
+    };
+    const updateBitmap = late('updateBitmap');
+    vm.updateBitmap = (i, bmp, x, y, res) => {
+        const r = updateBitmap(i, bmp, x, y, res);
+        if (!isQuiet(vm)) broadcastCostumeUpdate(vm, i, false, bmp, x, y);
+        return r;
+    };
+    const fm = vm.runtime.fontManager;
+    if (fm) {
+        let loading = 0;
+        const deserialize = fm.deserialize.bind(fm);
+        fm.deserialize = (...a) => {
+            loading++;
+            return Promise.resolve(deserialize(...a)).finally(() => { loading--; });
+        };
+        const fontQuiet = () => loading > 0 || isQuiet(vm) || !window.dimodCollab;
+        const addSystemFont = fm.addSystemFont.bind(fm);
+        fm.addSystemFont = (family, fallback) => {
+            const r = addSystemFont(family, fallback);
+            if (!fontQuiet()) window.dimodCollab.sendAssetUpdate({kind: 'font-add', system: true, family, fallback});
+            return r;
+        };
+        const addCustomFont = fm.addCustomFont.bind(fm);
+        fm.addCustomFont = (family, fallback, asset) => {
+            const r = addCustomFont(family, fallback, asset);
+            if (!fontQuiet()) {
+                window.dimodCollab.sendAssetUpdate({kind: 'font-add', system: false, family, fallback,
+                    dataFormat: asset.dataFormat, data: uint8ToBase64(asset.data)});
+            }
+            return r;
+        };
+        const deleteFont = fm.deleteFont.bind(fm);
+        fm.deleteFont = index => {
+            const font = fm.fonts[index];
+            const r = deleteFont(index);
+            if (font && !fontQuiet()) window.dimodCollab.sendAssetUpdate({kind: 'font-delete', family: font.family});
+            return r;
+        };
+    }
+    const updateSoundBuffer = late('updateSoundBuffer');
+    vm.updateSoundBuffer = (i, buf, enc) => {
+        const r = updateSoundBuffer(i, buf, enc);
+        if (enc && !isQuiet(vm)) broadcastSoundUpdate(vm, i, enc);
+        return r;
+    };
 };
 const FIELD_RE = /<field[^>]*\bname="(?:VARIABLE|LIST|BROADCAST_INPUT|BROADCAST_OPTION)"[^>]*>/gi;
 const attr = (tagText, name) => { const m = tagText.match(new RegExp(`\\b${name}="([^"]*)"`, 'i')); return m ? m[1] : null; };
@@ -1370,4 +1738,295 @@ const installConnectSafetyRails = ScratchBlocks => {
     };
     Move.prototype.__dimodSafeRun = true;
 };
-export {UNSTABLE_ID_OPCODES, abandonGesture, allTargetHashes, applyRemoteAssetUpdate, applyRemoteBlocksShared, applyRemoteTargetCreate, applyRemoteTargetDelete, applyRemoteTargetRename, applyRemoteTargetReorder, applyTargetBlocks, attachShadowRef, broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeOrder, broadcastCostumeRename, broadcastCostumeReorder, broadcastCostumeUpdate, broadcastSoundAdd, broadcastSoundDelete, broadcastSoundOrder, broadcastSoundRename, broadcastSoundReorder, broadcastSoundUpdate, broadcastTargetCreate, broadcastTargetDelete, broadcastTargetRename, broadcastTargetReorder, clearRemoteEdited, computeBlocksHash as collabWorkspaceHealthDefault, colorForUserId, computeBlocksFingerprint, computeBlocksHash, contrastTextColor, dimodDragState, ensureEventVariables, findShadowRef, flushCostumeBroadcast, getRemoteEditedNames, handleRemotePaintPacket, hasActiveGesture, hasUnstableId, installBlockStateResponder, installConnectSafetyRails, installDragPreviewHook, installFieldCarets, installGestureRecovery, installPaintCollab, isApplyingRemotePaint, isLivePaintCostume, isPaintGestureActive, registerFieldCaretScope, repairAskewBlocks, resolveIncomingEvent, resolveShadowRef, resumePaintCollab, sanitizePreviewSvg, setAssetOrder, shareBlocksToTargetWithSync, suspendPaintCollab, targetBlocksHash, uninstallPaintCollab};
+const bytesHash = b => {
+    let h = 2166136261;
+    for (let i = 0; i < b.length; i++) h = Math.imul(h ^ b[i], 16777619);
+    return `${(h >>> 0).toString(36)}.${b.length}`;
+};
+const SA_ID = /^[\w-]{1,64}$/;
+const okScene = s => s && typeof s.id === 'string' && SA_ID.test(s.id) && typeof s.name === 'string' && s.name.length > 0 && s.name.length < 200;
+const okMeta = x => x && typeof x.id === 'string' && SA_ID.test(x.id) && typeof x.name === 'string' && x.name.length > 0 &&
+    x.name.length < 256 && typeof x.ext === 'string' && /^[a-z0-9]{1,10}$/.test(x.ext);
+const cleanMember = m => (m === '*' ? '*' : Array.isArray(m) ? m.filter(x => typeof x === 'string' && SA_ID.test(x)).slice(0, 500) : null);
+const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+const moved = (now, was) => {
+    const keep = list => { const ids = new Set(list.map(x => x.id)); return o => ids.has(o.id); };
+    return now.filter(keep(was)).map(x => x.id).join() !== was.filter(keep(now)).map(x => x.id).join();
+};
+const nonEmpty = p => Object.keys(p).some(k => k !== 'req');
+let scenesCollab = null;
+class ScenesAssetsCollab {
+    constructor (vm) {
+        this.vm = vm;
+        this.scenes = vm.dimodScenes;
+        this.assets = vm.dimodAssets;
+        this.quiet = 0;
+        this.edited = false;
+        this.atimer = 0;
+        this.attached = null;
+        this.off = null;
+        this.req = null;
+        this.answered = new Set();
+        this.waiting = new Map();
+        this.sbase = this.ssnap();
+        this.abase = this.asnap();
+        const hush = (obj, name) => {
+            const fn = obj[name].bind(obj);
+            obj[name] = (...args) => {
+                this.quiet++;
+                const done = () => { this.quiet--; this.rebase(); this.edited = false; };
+                let r;
+                try { r = fn(...args); } catch (e) { done(); throw e; }
+                if (r && r.then) return r.finally(done);
+                done();
+                return r;
+            };
+        };
+        hush(this.scenes, 'load');
+        hush(this.assets, 'loadFrom');
+        vm.runtime.on('DIMOD_SCENES', () => this.onScenes());
+        vm.runtime.on('DIMOD_ASSETS', () => this.onAssets());
+        let key = '';
+        vm.on('targetsUpdate', () => {
+            const k = vm.runtime.targets.filter(t => t.isOriginal).map(t => `${t.id}:${t.getName()}`).join('|');
+            if (k === key) return;
+            key = k;
+            if (this.waiting.size) this.applyScenes({members: {}});
+            this.onScenes();
+        });
+        this.attach();
+        setInterval(() => this.attach(), 2000);
+    }
+    send (type, data) { const c = window.dimodCollab; if (c) c.send(type, data); }
+    attach () {
+        const c = window.dimodCollab;
+        if (!c || c === this.attached) return;
+        if (this.off) this.off();
+        this.attached = c;
+        this.off = c.addMessageListener(msg => this.onMessage(msg));
+        if (c.joined) this.ask();
+    }
+    ask () {
+        this.req = Math.random().toString(36).slice(2);
+        const have = {};
+        for (const a of this.assets.list) have[a.id] = bytesHash(this.assets.bytes(a));
+        this.send('scene-state-request', {req: this.req, have});
+    }
+    rebase () { this.sbase = this.ssnap(); this.abase = this.asnap(); }
+    busy () { return this.quiet > 0 || !!this.vm.runtime.sequencer.activeThread || this.vm.dimodRemoteTargetCreates > 0; }
+    ssnap () {
+        const members = {};
+        for (const t of this.vm.runtime.targets) if (t.isOriginal && !t.isStage) members[t.getName()] = t.extensionStorage.dimodScenes;
+        return {list: this.scenes.list.map(s => ({id: s.id, name: s.name, backdrop: s.backdrop || ''})), main: this.scenes.main,
+            members: JSON.parse(JSON.stringify(members))};
+    }
+    asnap () {
+        const a = this.assets;
+        return {list: a.list.map(x => ({id: x.id, name: x.name, ext: x.ext, kind: x.kind})), data: new Map(a.list.map(x => [x.id, a.data.get(x.id)]))};
+    }
+    onScenes () {
+        if (this.busy()) { if (!this.quiet) this.sbase = this.ssnap(); return; }
+        const now = this.ssnap();
+        const was = this.sbase;
+        const p = {};
+        const old = new Map(was.list.map(s => [s.id, s]));
+        const ids = new Set(now.list.map(s => s.id));
+        const add = now.list.filter(s => !old.has(s.id));
+        const del = was.list.filter(s => !ids.has(s.id)).map(s => s.id);
+        const set = {};
+        for (const s of now.list) {
+            const o = old.get(s.id);
+            if (o && (o.name !== s.name || o.backdrop !== s.backdrop)) set[s.id] = {name: s.name, backdrop: s.backdrop};
+        }
+        if (add.length) p.add = add;
+        if (del.length) p.del = del;
+        if (Object.keys(set).length) p.set = set;
+        if (moved(now.list, was.list)) p.order = now.list.map(s => s.id);
+        if (now.main !== was.main) p.main = now.main;
+        const members = {};
+        for (const n of Object.keys(now.members)) if (!same(now.members[n], was.members[n])) members[n] = now.members[n];
+        if (Object.keys(members).length) p.members = members;
+        this.sbase = now;
+        if (nonEmpty(p)) { this.edited = true; this.send('scene-patch', p); }
+    }
+    onAssets () {
+        if (this.quiet) return;
+        if (this.vm.runtime.sequencer.activeThread && !this.atimer) { this.abase = this.asnap(); return; }
+        this.edited = true;
+        clearTimeout(this.atimer);
+        this.atimer = setTimeout(() => this.flushAssets(), 120);
+    }
+    flushAssets () {
+        clearTimeout(this.atimer);
+        this.atimer = 0;
+        const a = this.assets;
+        const now = this.asnap();
+        const was = this.abase;
+        const p = {};
+        const old = new Map(was.list.map(x => [x.id, x]));
+        const ids = new Set(now.list.map(x => x.id));
+        const add = now.list.filter(x => !old.has(x.id)).map(x => ({...x, data: uint8ToBase64(a.data.get(x.id) || new Uint8Array(0))}));
+        const del = was.list.filter(x => !ids.has(x.id)).map(x => x.id);
+        const set = {};
+        const data = {};
+        for (const x of now.list) {
+            const o = old.get(x.id);
+            if (!o) continue;
+            if (o.name !== x.name || o.ext !== x.ext || o.kind !== x.kind) set[x.id] = {name: x.name, ext: x.ext, kind: x.kind};
+            if (now.data.get(x.id) !== was.data.get(x.id)) data[x.id] = uint8ToBase64(now.data.get(x.id) || new Uint8Array(0));
+        }
+        if (add.length) p.add = add;
+        if (del.length) p.del = del;
+        if (Object.keys(set).length) p.set = set;
+        if (Object.keys(data).length) p.data = data;
+        if (moved(now.list, was.list)) p.order = now.list.map(x => x.id);
+        this.abase = now;
+        if (nonEmpty(p)) this.send('dasset-patch', p);
+    }
+    applyScenes (p) {
+        const h = this.scenes;
+        const rt = this.vm.runtime;
+        const find = id => h.list.find(s => s.id === id);
+        this.quiet++;
+        try {
+            for (const s of (Array.isArray(p.add) ? p.add : []).filter(okScene)) {
+                if (find(s.id)) continue;
+                h.list.push({id: s.id, name: s.name, backdrop: typeof s.backdrop === 'string' ? s.backdrop : ''});
+                const clash = h.list.find(x => x.id !== s.id && x.name.toLowerCase() === s.name.toLowerCase());
+                if (clash) h.rename(clash.id > s.id ? clash.id : s.id, s.name);
+            }
+            for (const id of Array.isArray(p.del) ? p.del : []) if (find(id)) h.remove(id);
+            const set = p.set && typeof p.set === 'object' ? p.set : {};
+            for (const id of Object.keys(set)) {
+                const s = find(id);
+                const v = set[id];
+                if (!s || !v) continue;
+                if (typeof v.name === 'string' && v.name && v.name !== s.name) h.rename(id, v.name);
+                if (typeof v.backdrop === 'string' && v.backdrop !== s.backdrop) {
+                    s.backdrop = v.backdrop;
+                    if (id === h.current) h.applyBackdrop();
+                }
+            }
+            if (Array.isArray(p.order)) {
+                const at = id => { const i = p.order.indexOf(id); return i < 0 ? 1e9 : i; };
+                h.list.sort((x, y) => at(x.id) - at(y.id));
+            }
+            if (typeof p.main === 'string' && find(p.main)) h.main = p.main;
+            const members = p.members && typeof p.members === 'object' ? p.members : {};
+            for (const n of Object.keys(members)) this.waiting.set(n, members[n]);
+            for (const [n, m] of this.waiting) {
+                const t = rt.getSpriteTargetByName(n);
+                if (!t) continue;
+                this.waiting.delete(n);
+                const v = cleanMember(m);
+                if (v !== null) t.extensionStorage.dimodScenes = v;
+            }
+            if (this.waiting.size > 200) this.waiting.clear();
+            if (!find(h.current)) h.goTo(h.list[0].id, {run: false});
+            h.assignMissing();
+            h.applyAll();
+            h.applyBackdrop();
+            h.changed();
+        } finally {
+            this.quiet--;
+            this.sbase = this.ssnap();
+        }
+    }
+    applyAssets (p) {
+        const a = this.assets;
+        const find = id => a.list.find(x => x.id === id);
+        const meta = (asset, x) => {
+            if (typeof x.name === 'string' && x.name && x.name !== asset.name) a.rename(asset, x.name);
+            if (typeof x.ext === 'string' && /^[a-z0-9]{1,10}$/.test(x.ext)) asset.ext = x.ext;
+            asset.kind = typeof x.kind === 'string' && x.kind.length < 20 ? x.kind : kindOfExt(asset.ext);
+        };
+        clearTimeout(this.atimer);
+        if (this.atimer) this.flushAssets();
+        this.quiet++;
+        try {
+            for (const x of (Array.isArray(p.add) ? p.add : []).filter(okMeta)) {
+                if (find(x.id) || typeof x.data !== 'string') continue;
+                const bytes = base64ToUint8(x.data);
+                const asset = {id: x.id, name: x.name, ext: x.ext, kind: kindOfExt(x.ext), size: bytes.length};
+                if (typeof x.kind === 'string' && x.kind.length < 20) asset.kind = x.kind;
+                a.list.push(asset);
+                a.data.set(asset.id, bytes);
+            }
+            for (const id of Array.isArray(p.del) ? p.del : []) { const x = find(id); if (x) a.remove(x); }
+            const set = p.set && typeof p.set === 'object' ? p.set : {};
+            for (const id of Object.keys(set)) { const x = find(id); if (x && set[id]) meta(x, set[id]); }
+            const data = p.data && typeof p.data === 'object' ? p.data : {};
+            for (const id of Object.keys(data)) {
+                const x = find(id);
+                if (x && typeof data[id] === 'string' && !isLivePaintCostume(`asset:${id}`, 0)) a.replace(x, base64ToUint8(data[id]));
+            }
+            if (Array.isArray(p.order)) {
+                const at = id => { const i = p.order.indexOf(id); return i < 0 ? 1e9 : i; };
+                a.list.sort((x, y) => at(x.id) - at(y.id));
+            }
+            a.changed();
+        } finally {
+            this.quiet--;
+            this.abase = this.asnap();
+        }
+    }
+    answer (msg) {
+        if (typeof msg.req !== 'string' || this.answered.has(msg.req)) return;
+        if (this.atimer) this.flushAssets();
+        const have = msg.have && typeof msg.have === 'object' ? msg.have : {};
+        const a = this.assets;
+        const list = a.list.map(x => ({id: x.id, name: x.name, ext: x.ext, kind: x.kind}));
+        const data = {};
+        for (const x of a.list) if (have[x.id] !== bytesHash(a.bytes(x))) data[x.id] = uint8ToBase64(a.bytes(x));
+        this.answered.add(msg.req);
+        this.send('scene-state', {req: msg.req, scenes: this.ssnap(), assets: {list, data}});
+    }
+    onState (msg) {
+        this.answered.add(msg.req);
+        if (msg.req !== this.req) return;
+        this.req = null;
+        if (this.edited) return;
+        const s = msg.scenes && typeof msg.scenes === 'object' ? msg.scenes : null;
+        const list = s && Array.isArray(s.list) ? s.list.filter(okScene) : [];
+        if (list.length) {
+            const ids = new Set(list.map(x => x.id));
+            const set = {};
+            for (const x of list) set[x.id] = x;
+            this.applyScenes({add: list, del: this.scenes.list.filter(x => !ids.has(x.id)).map(x => x.id), set,
+                order: list.map(x => x.id), main: s.main, members: s.members});
+        }
+        const as = msg.assets && typeof msg.assets === 'object' ? msg.assets : null;
+        if (!as || !Array.isArray(as.list)) return;
+        const metas = as.list.filter(okMeta);
+        const ids = new Set(metas.map(x => x.id));
+        const data = as.data && typeof as.data === 'object' ? as.data : {};
+        const set = {};
+        const have = {};
+        for (const x of metas) { set[x.id] = x; if (typeof data[x.id] === 'string') have[x.id] = data[x.id]; }
+        this.applyAssets({add: metas.map(x => ({...x, data: data[x.id]})), del: this.assets.list.filter(x => !ids.has(x.id)).map(x => x.id),
+            set, data: have, order: metas.map(x => x.id)});
+    }
+    onMessage (msg) {
+        switch (msg.type) {
+        case 'joined': return this.ask();
+        case 'scene-state-request': return setTimeout(() => this.answer(msg), Math.random() * 400);
+        case 'scene-state': return this.onState(msg);
+        case 'scene-patch': return this.applyScenes(msg);
+        case 'dasset-patch': return this.applyAssets(msg);
+        default:
+        }
+    }
+}
+const quietAssets = fn => {
+    const c = scenesCollab;
+    if (!c) return fn();
+    if (c.atimer) c.flushAssets();
+    c.quiet++;
+    try { return fn(); } finally { c.quiet--; c.abase = c.asnap(); }
+};
+const installScenesCollab = vm => {
+    installCollabHooks(vm);
+    if (!scenesCollab && vm.dimodScenes && vm.dimodAssets && typeof window !== 'undefined') scenesCollab = new ScenesAssetsCollab(vm);
+    return scenesCollab;
+};
+export {ScenesAssetsCollab, installScenesCollab, installCollabHooks, remotely, broadcastTileMaps, quietAssets, UNSTABLE_ID_OPCODES, abandonGesture, allTargetHashes, applyRemoteAssetUpdate, applyRemoteBlocksShared, applyRemoteTargetCreate, applyRemoteTargetDelete, applyRemoteTargetRename, applyRemoteTargetReorder, applyTargetBlocks, attachShadowRef, broadcastCostumeAdd, broadcastCostumeDelete, broadcastCostumeOrder, broadcastCostumeRename, broadcastCostumeUpdate, broadcastSoundAdd, broadcastSoundDelete, broadcastSoundOrder, broadcastSoundRename, broadcastSoundUpdate, broadcastTargetCreate, broadcastTargetDelete, broadcastTargetRename, broadcastTargetReorder, clearRemoteEdited, computeBlocksHash as collabWorkspaceHealthDefault, colorForUserId, computeBlocksFingerprint, computeBlocksHash, contrastTextColor, dimodDragState, ensureEventVariables, findShadowRef, flushCostumeBroadcast, getRemoteEditedNames, handleRemotePaintPacket, hasActiveGesture, hasUnstableId, installBlockStateResponder, installConnectSafetyRails, installDragPreviewHook, installFieldCarets, installGestureRecovery, installPaintCollab, isApplyingRemotePaint, isLivePaintCostume, isPaintGestureActive, registerFieldCaretScope, repairAskewBlocks, resolveIncomingEvent, resolveShadowRef, resumePaintCollab, sanitizePreviewSvg, setAssetOrder, shareBlocksToTargetWithSync, suspendPaintCollab, targetBlocksHash, uninstallPaintCollab};

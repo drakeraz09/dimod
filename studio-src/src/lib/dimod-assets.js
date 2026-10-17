@@ -1,19 +1,6 @@
 import JSZip from 'jszip';
 import {askRename} from './dimod-ui';
-import {
-    broadcastSoundRename,
-    broadcastSoundOrder,
-    broadcastSoundReorder,
-    broadcastSoundDelete,
-    broadcastSoundAdd,
-    setAssetOrder,
-    broadcastCostumeRename,
-    broadcastCostumeOrder,
-    broadcastCostumeReorder,
-    broadcastCostumeDelete,
-    broadcastCostumeAdd,
-    broadcastTargetCreate
-} from './dimod-collab';
+import {broadcastSoundRename, broadcastSoundOrder, setAssetOrder, broadcastCostumeRename, broadcastCostumeOrder} from './dimod-collab';
 import {animationsOf} from './dimod-animation/runtime';
 import {normalizeAnim, serializeAnim, uniqueName, makeAnimId} from './dimod-animation/core';
 import {exportAnimFile} from './dimod-animation/editor';
@@ -30,9 +17,6 @@ const KINDS = {
         dup: (vm, i) => vm.duplicateCostume(i),
         reorder: (vm, id, from, to) => vm.reorderCostume(id, from, to),
         setOrder: (vm, target, objs) => setAssetOrder(vm, target, 'costume', objs),
-        bAdd: broadcastCostumeAdd,
-        bDel: broadcastCostumeDelete,
-        bReorder: broadcastCostumeReorder,
         bOrder: broadcastCostumeOrder,
         bRename: broadcastCostumeRename,
         rename: (target, i, n) => target.renameCostume(i, n)
@@ -44,9 +28,6 @@ const KINDS = {
         dup: (vm, i) => vm.duplicateSound(i),
         reorder: (vm, id, from, to) => vm.reorderSound(id, from, to),
         setOrder: (vm, target, objs) => setAssetOrder(vm, target, 'sound', objs),
-        bAdd: broadcastSoundAdd,
-        bDel: broadcastSoundDelete,
-        bReorder: broadcastSoundReorder,
         bOrder: broadcastSoundOrder,
         bRename: broadcastSoundRename,
         rename: (target, i, n) => target.renameSound(i, n)
@@ -88,9 +69,6 @@ const KINDS = {
             animationHost(target).setAnimations(target.sprite, objs);
             vm.runtime.emitProjectChanged();
         },
-        bAdd: NO_BROADCAST,
-        bDel: NO_BROADCAST,
-        bReorder: NO_BROADCAST,
         bOrder: NO_BROADCAST,
         bRename: NO_BROADCAST,
         rename: (target, i, n) => {
@@ -111,11 +89,8 @@ const bulkDelete = (vm, kind, indexes) => {
     if (!target) return null;
     const restores = [];
     ascending(indexes).reverse().forEach(i => {
-        const item = k.list(target)[i];
-        const name = item && item.name;
         const restore = k.del(vm, i);
         if (!restore) return;
-        if (name) k.bDel(vm, target.id, i, name);
         restores.push(restore);
     });
     if (restores.length === 0) return null;
@@ -133,7 +108,6 @@ const bulkDuplicate = async (vm, kind, indexes) => {
         const from = k.list(target).indexOf(originals[n]);
         if (from === -1) continue;
         await k.dup(vm, from);
-        k.bAdd(vm, target.id, from + 1);
         const arr = k.list(target).slice();
         const [copy] = arr.splice(from + 1, 1);
         const dest = arr.indexOf(last) + 1 + n;
@@ -164,7 +138,7 @@ const bulkRename = (vm, kind, indexes, pattern) => {
         const name = patternNames(list.length, base)[n];
         k.rename(target, i, name);
         const newName = k.list(target)[i].name;
-        k.bRename(vm, target.id, i, oldName, newName);
+        k.bRename(vm, target.id, i, oldName, newName, k.list(target)[i]);
     });
     vm.emitTargetsUpdate();
 };
@@ -261,7 +235,7 @@ const folderGroupDrop = (vm, k, view, indexes, draggedPos, newPos, track) => {
         const i = k.list(target).indexOf(o);
         const oldName = o.name;
         k.rename(target, i, withFolder(oldName, folder));
-        k.bRename(vm, target.id, i, oldName, k.list(target)[i].name);
+        k.bRename(vm, target.id, i, oldName, k.list(target)[i].name, k.list(target)[i]);
         renamed = true;
     });
     if (renamed) vm.emitTargetsUpdate();
@@ -428,21 +402,19 @@ const asCostumes = (vm, entry) => fetchBytes(entry.libraryFilePage).then(buffer 
         resolve(costumes);
     }, reject);
 }));
-const addDimodLibraryEntry = (vm, kind, entry, {broadcast = true} = {}) => {
+const addDimodLibraryEntry = (vm, kind, entry) => {
     let done;
     if (kind === 'sprite') {
         done = fetchBytes(entry.spriteFileUrl)
-            .then(buffer => vm.addSprite(buffer))
-            .then(() => broadcastTargetCreate(vm));
+            .then(buffer => vm.addSprite(buffer));
     } else if (kind === 'backdrop') {
-        const stage = vm.runtime.getTargetForStage();
         done = asCostumes(vm, entry).then(costumes => costumes.reduce(
-            (p, c) => p.then(() => vm.addBackdrop(c.md5, c)).then(() => stage && broadcastCostumeAdd(vm, stage.id)),
+            (p, c) => p.then(() => vm.addBackdrop(c.md5, c)),
             Promise.resolve()));
     } else if (kind === 'costume') {
         const targetId = vm.editingTarget && vm.editingTarget.id;
         done = asCostumes(vm, entry).then(costumes => costumes.reduce(
-            (p, c) => p.then(() => vm.addCostume(c.md5, c, targetId)).then(() => targetId && broadcastCostumeAdd(vm, targetId)),
+            (p, c) => p.then(() => vm.addCostume(c.md5, c, targetId)),
             Promise.resolve()));
     } else if (kind === 'sound') {
         const targetId = vm.editingTarget && vm.editingTarget.id;
@@ -451,7 +423,7 @@ const addDimodLibraryEntry = (vm, kind, entry, {broadcast = true} = {}) => {
                 sound.name = entry.name;
                 resolve(vm.addSound(sound, targetId));
             }, reject);
-        })).then(() => broadcast && targetId && broadcastSoundAdd(vm, targetId));
+        }));
     } else { return Promise.reject(new Error(`Can't add a ${kind} here`)); }
     return done.then(() => { used(entry.dimodLibraryId); });
 };

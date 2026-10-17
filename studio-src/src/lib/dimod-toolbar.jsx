@@ -15,6 +15,7 @@ import {
     getUnsavedEditCount,
     attachEditClock,
     hasUnsavedLocalEdits,
+    getLastLocalEditAt,
     getLocalEditSeq,
     setSaveHealth,
     markSavedThrough,
@@ -23,6 +24,9 @@ import {
     totalSize,
     zipFiles,
     captureProjectFiles,
+    captureProjectFilesSync,
+    jsonPatchFor,
+    buildJsonDiff,
     manifestFor,
     manifestsEqual,
     missingReferencedAssets,
@@ -44,7 +48,8 @@ const LOOK = {
     saving: {color: '#f0ad4e', label: 'Saving…', pulse: true},
     unsaved: {color: '#f0ad4e', label: 'Unsaved'},
     retrying: {color: '#e67e22', label: 'Retrying', pulse: true},
-    conflict: {color: '#e74c3c', label: 'Resolving'}
+    conflict: {color: '#e74c3c', label: 'Resolving'},
+    offline: {color: '#95a5a6', label: 'Offline, will save when back'}
 };
 class DimodSavePill extends React.Component {
     constructor (props) {
@@ -68,6 +73,7 @@ class DimodSavePill extends React.Component {
         if (health === 'saving') key = 'saving';
         else if (health === 'retrying') key = 'retrying';
         else if (health === 'conflict') key = 'conflict';
+        else if (health === 'offline') key = 'offline';
         else if (unsaved > 0) key = 'unsaved';
         const look = LOOK[key];
         const label = key === 'unsaved' || key === 'retrying' ?
@@ -287,8 +293,9 @@ const buildSaveDiff = (files, manifest, previousManifest, {allowEmpty = false, f
     return zipFiles(patch);
 };
 const MAX_EDGE_UPLOAD_BYTES = 100 * 1024 * 1024;
-const AUTO_SAVE_DEBOUNCE_MS = 10000;
-const AUTO_SAVE_MAX_INTERVAL_MS = 30000;
+const AUTO_SAVE_DEBOUNCE_MS = 3000;
+const AUTO_SAVE_MAX_INTERVAL_MS = 15000;
+const KEEPALIVE_MAX_BYTES = 60000;
 const ONWARD_SAVE_THROTTLE_MS = 2500;
 const SAVE_DEFERRED = 'deferred';
 const DRAFT_INTERVAL_MS = 60000;
@@ -391,6 +398,8 @@ class DimodToolbar extends React.Component {
         this.handleSaveNow = this.handleSaveNow.bind(this);
         this.handleSaveNewClick = this.handleSaveNewClick.bind(this);
         this.handleBeforeUnload = this.handleBeforeUnload.bind(this);
+        this.handlePageHide = this.handlePageHide.bind(this);
+        this.handleOnline = this.handleOnline.bind(this);
         this.handlePublishClick = this.handlePublishClick.bind(this);
         this.handlePlaytestClick = this.handlePlaytestClick.bind(this);
         this.handleSaveNameInputChange = this.handleSaveNameInputChange.bind(this);
@@ -404,12 +413,16 @@ class DimodToolbar extends React.Component {
         this.checkJoinFreshness = this.checkJoinFreshness.bind(this);
         this._knownUserIds = new Set();
         this._lastSavedManifest = null;
+        this._jcrcs = null;
         this._lastSavedRevision = null;
         this._lastSavedSize = null;
         this._autoSaveInFlight = false;
     }
     componentDidMount () {
         window.addEventListener('beforeunload', this.handleBeforeUnload);
+        window.addEventListener('pagehide', this.handlePageHide);
+        window.addEventListener('online', this.handleOnline);
+        document.addEventListener('visibilitychange', this.handlePageHide);
         window.addEventListener('dimod:toolbar-action', this.handleToolbarAction);
         document.addEventListener('mousedown', this.handleMoreOutside);
         document.addEventListener('keydown', this.handleMoreOutside);
@@ -423,6 +436,9 @@ class DimodToolbar extends React.Component {
     }
     componentWillUnmount () {
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
+        window.removeEventListener('pagehide', this.handlePageHide);
+        window.removeEventListener('online', this.handleOnline);
+        document.removeEventListener('visibilitychange', this.handlePageHide);
         window.removeEventListener('dimod:toolbar-action', this.handleToolbarAction);
         document.removeEventListener('mousedown', this.handleMoreOutside);
         document.removeEventListener('keydown', this.handleMoreOutside);
@@ -601,12 +617,13 @@ class DimodToolbar extends React.Component {
         }
         const loaded = window.dimodLoadedSource;
         if (!loaded || loaded.projectId !== projectId) return;
+        const seq0 = getLocalEditSeq();
         fetch(`${API_BASE}/projects/${projectId}/source`, {headers: authHeaders(), cache: 'no-store'})
             .then(res => (res.ok ? res.json() : null))
             .then(data => {
                 if (!data || !Number.isInteger(data.revision)) return;
                 if (data.revision === loaded.revision || data.revision === this._lastSavedRevision) return;
-                if (hasUnsavedLocalEdits()) return;
+                if (hasUnsavedLocalEdits() || getLocalEditSeq() !== seq0 || Date.now() - getLastLocalEditAt() < 10000) return;
                 window.dispatchEvent(new CustomEvent('dimod:system-message', {
                     detail: {text: 'Picking up your collaborators\' latest changes...'}
                 }));
@@ -731,8 +748,10 @@ class DimodToolbar extends React.Component {
             })
             .catch(() => { this.setState({restoringId: null, historyError: 'Restore failed... try again'}); });
     }
-    saveQueryString ({label, isAuto, isDiff, baseRevision}) {
+    saveQueryString ({label, isAuto, isDiff, isJp, baseRevision}) {
         const qs = new URLSearchParams();
+        qs.set('jpok', '1');
+        if (isJp) qs.set('jp', '1');
         if (label) qs.set('label', label);
         if (isAuto) qs.set('auto', '1');
         if (isDiff) qs.set('diff', '1');
@@ -766,19 +785,21 @@ class DimodToolbar extends React.Component {
             const err = new Error('save failed');
             if (done.status === 422 && body && body.code === 'invalid-project') err.invalidProject = true;
             else if (options.isDiff && (done.status === 422 || done.status === 400)) err.diffApplyFailed = true;
+            if (done.status === 422 && body && body.code === 'missing-assets') err.missingAssets = body.missing;
             if (done.status === 409 && body && body.code === 'revision-conflict') err.revisionConflict = true;
+            err.body = body;
             throw err;
         }
         if (onProgress) onProgress(100);
         return body || {};
     }
-    uploadSource (blob, {label, isAuto, isDiff, baseRevision}, onProgress) {
+    uploadSource (blob, {label, isAuto, isDiff, isJp, baseRevision}, onProgress) {
         if (blob.size > MAX_EDGE_UPLOAD_BYTES) {
-            return this.uploadSourceChunked(blob, {label, isAuto, isDiff, baseRevision}, onProgress);
+            return this.uploadSourceChunked(blob, {label, isAuto, isDiff, isJp, baseRevision}, onProgress);
         }
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            const query = this.saveQueryString({label, isAuto, isDiff, baseRevision});
+            const query = this.saveQueryString({label, isAuto, isDiff, isJp, baseRevision});
             xhr.open('PUT', `${API_BASE}/projects/${getParam('p')}/source${query ? `?${query}` : ''}`);
             const headers = authHeaders();
             if (headers.Authorization) xhr.setRequestHeader('Authorization', headers.Authorization);
@@ -795,14 +816,16 @@ class DimodToolbar extends React.Component {
                 if (xhr.status === 422 && body && body.code === 'invalid-project') {
                     err.invalidProject = true;
                 } else if (isDiff && (xhr.status === 422 || xhr.status === 400)) { err.diffApplyFailed = true; }
+                if (xhr.status === 422 && body && body.code === 'missing-assets') err.missingAssets = body.missing;
                 if (xhr.status === 409 && body && body.code === 'revision-conflict') { err.revisionConflict = true; }
+                err.body = body;
                 reject(err);
             };
-            xhr.onerror = () => reject(new Error('save failed'));
+            xhr.onerror = () => { const err = new Error('save failed'); err.offline = true; reject(err); };
             xhr.send(blob);
         });
     }
-    async saveSource (onProgress, {label, isAuto} = {}) {
+    async saveSource (onProgress, {label, isAuto, tries = 0} = {}) {
         if (!window.vm) throw new Error('not ready');
         if (window.dimodFlushPaint) window.dimodFlushPaint();
         const unsaveable = unsaveableProjectReason(window.vm);
@@ -843,17 +866,38 @@ class DimodToolbar extends React.Component {
             }
         }
         const fullWouldBeOversized = totalSize(files) > MAX_EDGE_UPLOAD_BYTES;
-        const diffBlob = canDiff ?
-            buildSaveDiff(files, manifest, base, {allowEmpty: !isAuto, force: fullWouldBeOversized || missingAssets.length > 0}) :
-            null;
+        const jp = canDiff && this._jcrcs ? jsonPatchFor(files, this._jcrcs) : null;
+        let diffBlob = null;
+        if (jp) {
+            const changed = Object.keys(manifest).filter(f => f !== 'project.json' && manifest[f] !== base[f]);
+            const removed = Object.keys(base).filter(f => !(f in manifest) && !missingAssets.includes(f));
+            if (isAuto && jp.empty && !changed.length && !removed.length) { this._lastSavedManifest = manifest; return; }
+            diffBlob = buildJsonDiff(files, jp.patch, changed, removed);
+        } else if (canDiff) {
+            diffBlob = buildSaveDiff(files, manifest, base, {allowEmpty: !isAuto, force: fullWouldBeOversized || missingAssets.length > 0});
+        }
         let result;
         try {
             result = await this.uploadSource(
                 diffBlob || zipFiles(files),
-                {label, isAuto, isDiff: !!diffBlob, baseRevision: this._lastSavedRevision},
+                {label, isAuto, isDiff: !!diffBlob, isJp: !!jp, baseRevision: this._lastSavedRevision},
                 onProgress
             );
         } catch (err) {
+            const b = err.body || {};
+            if (err.revisionConflict && tries < 3 && (b.jcrcs || (b.retry && jp))) {
+                if (b.jcrcs) { this._jcrcs = b.jcrcs; this._lastSavedRevision = b.revision; }
+                await new Promise(ok => setTimeout(ok, 300 * (tries + 1)));
+                return this.saveSource(onProgress, {label, isAuto, tries: tries + 1});
+            }
+            if (err.missingAssets && tries < 3 && err.missingAssets.some(f => f in files)) {
+                const m = {...base};
+                for (const f of err.missingAssets) delete m[f];
+                this._lastSavedManifest = m;
+                return this.saveSource(onProgress, {label, isAuto, tries: tries + 1});
+            }
+            if (err.offline) throw err;
+            this._jcrcs = null;
             if (err.revisionConflict && isAuto) {
                 this._lastSavedManifest = null;
                 this.fetchCurrentRevision();
@@ -872,6 +916,7 @@ class DimodToolbar extends React.Component {
             }
         }
         this._lastSavedManifest = Object.keys(preserved).length ? {...manifest, ...preserved} : manifest;
+        this._jcrcs = result.jcrcs || null;
         if (Number.isInteger(result.size)) this._lastSavedSize = result.size;
         if (Number.isInteger(result.revision)) {
             this._lastSavedRevision = result.revision;
@@ -883,6 +928,7 @@ class DimodToolbar extends React.Component {
         if (!loaded || loaded.seq === this._adoptedLoadSeq || loaded.projectId !== getParam('p')) return;
         this._adoptedLoadSeq = loaded.seq;
         this._lastSavedManifest = loaded.manifest;
+        this._jcrcs = null;
         this._lastSavedRevision = loaded.revision;
         this._revisionKnown = true;
     }
@@ -892,7 +938,7 @@ class DimodToolbar extends React.Component {
     }
     scheduleAutoSaveRetry () {
         if (!hasUnsavedLocalEdits()) return;
-        if ((this._autoSaveRetries || 0) >= 8) return;
+        if ((this._autoSaveRetries || 0) >= 8 && navigator.onLine !== false) return;
         this._autoSaveRetries = (this._autoSaveRetries || 0) + 1;
         const delay = Math.min(60000, 5000 * Math.pow(2, this._autoSaveRetries - 1));
         clearTimeout(this._autoSaveRetryTimeout);
@@ -912,14 +958,17 @@ class DimodToolbar extends React.Component {
                 const outcome = await this.saveSource(null, {label, isAuto: true});
                 saved = outcome !== SAVE_DEFERRED;
                 if (saved) { markSavedThrough(seqAtStart); this._autoSaveRetries = 0; this.props.onProjectUnchanged(); }
-            } catch (err) {
-            } finally { this._autoSaveInFlight = false; }
+            } catch (err) { if (err && err.offline) this._lastDeferReason = 'offline'; } finally { this._autoSaveInFlight = false; }
             if (saved) {
                 setSaveHealth('ok');
                 if (!hasUnsavedLocalEdits()) this.onFullySaved();
                 this.reloadIntoNewProject();
             }
-            else { setSaveHealth(this._lastDeferReason === 'conflict' ? 'conflict' : 'retrying'); this.scheduleAutoSaveRetry(); }
+            else {
+                const off = this._lastDeferReason === 'offline' || (typeof navigator !== 'undefined' && navigator.onLine === false);
+                setSaveHealth(off ? 'offline' : this._lastDeferReason === 'conflict' ? 'conflict' : 'retrying');
+                this.scheduleAutoSaveRetry();
+            }
             return;
         }
         this.setState({saveStatus: 'busy', saveProgress: 0});
@@ -980,6 +1029,55 @@ class DimodToolbar extends React.Component {
         clearTimeout(this._autoSaveRetryTimeout);
         this._autoSaveRetries = 0;
         this.handleAutoSave();
+    }
+    handleOnline () {
+        if (!hasUnsavedLocalEdits()) return;
+        this._autoSaveRetries = 0;
+        clearTimeout(this._autoSaveRetryTimeout);
+        this._autoSaveRetryTimeout = setTimeout(() => {
+            if (this.state.collabUsers.length > 0) this.handleOnwardSave();
+            else this.handleAutoSave();
+        }, 500);
+    }
+    handlePageHide (e) {
+        if (e && e.type === 'visibilitychange' && document.visibilityState !== 'hidden') return;
+        if (window.dimodFlushPaint) window.dimodFlushPaint();
+        const vm = window.vm;
+        const projectId = getParam('p');
+        if (!projectId || !vm || !vm.__dimodProjectFullyLoaded || !hasUnsavedLocalEdits()) return;
+        const hiding = e && e.type === 'visibilitychange';
+        if ((hiding && this._autoSaveInFlight) || this.state.saveStatus === 'busy' || !this._jcrcs || !this._lastSavedManifest) return;
+        if (this.state.autosaveOff && !this.state.collabUsers.length) return;
+        try {
+            if (unsaveableProjectReason(vm)) return;
+            const files = captureProjectFilesSync(vm);
+            const manifest = manifestFor(files);
+            const base = this._lastSavedManifest;
+            const jp = jsonPatchFor(files, this._jcrcs);
+            if (!jp) return;
+            const changed = Object.keys(manifest).filter(f => f !== 'project.json' && manifest[f] !== base[f]);
+            if (jp.empty && !changed.length) return;
+            const blob = buildJsonDiff(files, jp.patch, changed, []);
+            if (blob.size > KEEPALIVE_MAX_BYTES) return;
+            const query = this.saveQueryString({isAuto: true, isDiff: true, isJp: true, baseRevision: this._lastSavedRevision});
+            const seq = getLocalEditSeq();
+            const sent = fetch(`${API_BASE}/projects/${projectId}/source?${query}`, {
+                method: 'PUT', keepalive: true, body: blob,
+                headers: {...authHeaders(), 'Content-Type': 'application/x.dimod.sb3-diff'}
+            });
+            if (hiding) {
+                this._autoSaveInFlight = true;
+                sent.then(res => (res.ok ? res.json() : null)).then(body => {
+                    if (!body || !Number.isInteger(body.revision)) return;
+                    this._lastSavedRevision = body.revision;
+                    this._jcrcs = body.jcrcs || null;
+                    this._lastSavedManifest = {...base, ...manifest};
+                    markSavedThrough(seq);
+                    setSaveHealth('ok');
+                    if (!hasUnsavedLocalEdits()) this.onFullySaved();
+                }).catch(() => {}).then(() => { this._autoSaveInFlight = false; });
+            }
+        } catch (err) {}
     }
     handleBeforeUnload (e) {
         if (window.dimodFlushPaint) window.dimodFlushPaint();

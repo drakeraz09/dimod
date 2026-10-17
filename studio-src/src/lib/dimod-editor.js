@@ -12,7 +12,6 @@ import {setStageSize} from '../reducers/stage-size';
 import {setFullScreen} from '../reducers/mode';
 import {emptySprite} from './empty-assets';
 import downloadBlob from './download-blob';
-import {broadcastTargetCreate} from './dimod-collab';
 import {STAGE_SIZE_MODES} from './layout-constants';
 import {askAlert, askConfirm, askPrompt, CODE_THEMES, setMonacoPref, STUDIO_COLOURS, STUDIO_STYLES} from './dimod-ui';
 const RECENT_KEY = 'dimod:palette-recent';
@@ -1110,10 +1109,7 @@ const setAllCollapsed = collapsed => onWorkspace((workspace, Blockly) => {
 });
 const addPaintedSprite = vm => {
     const n = vm.runtime.targets.filter(target => target.isOriginal && !target.isStage).length + 1;
-    vm.addSprite(JSON.stringify(emptySprite(`Sprite${n}`, 'pop', 'costume1'))).then(() => {
-        broadcastTargetCreate(vm);
-        setTimeout(() => showTab(COSTUMES_TAB_INDEX));
-    });
+    vm.addSprite(JSON.stringify(emptySprite(`Sprite${n}`, 'pop', 'costume1'))).then(() => setTimeout(() => showTab(COSTUMES_TAB_INDEX)));
 };
 const downloadProject = vm => {
     const state = reduxState();
@@ -1175,7 +1171,7 @@ const actionItems = vm => {
     add('sprite-library', 'Choose a sprite from the library', () => dispatch(openSpriteLibrary()), {...s, keywords: 'add new'});
     if (sprite) {
         add('duplicate-sprite', `Duplicate ${sprite.getName()}`,
-            () => vm.duplicateSprite(sprite.id).then(() => broadcastTargetCreate(vm)), {...s, keywords: 'copy clone'});
+            () => vm.duplicateSprite(sprite.id), {...s, keywords: 'copy clone'});
         add('export-sprite', `Export ${sprite.getName()}`,
             () => vm.exportSprite(sprite.id).then(content => downloadBlob(`${sprite.getName()}.warps`, content)),
             {...s, keywords: 'download save file'});

@@ -25,10 +25,6 @@ import DragConstants from '../lib/drag-constants';
 import downloadBlob from '../lib/download-blob';
 import SharedAudioContext from '../lib/audio/shared-audio-context.js';
 import {
-    broadcastCostumeAdd,
-    broadcastSoundAdd,
-    broadcastSoundDelete,
-    broadcastSoundOrder,
     getRemoteEditedNames,
     clearRemoteEdited
 } from '../lib/dimod-collab';
@@ -205,10 +201,7 @@ class SoundTab extends React.Component {
     }
 
     handleDeleteSound(soundIndex) {
-        const target = this.props.vm.editingTarget;
-        const name = target && target.sprite.sounds[soundIndex]?.name;
         const restoreFun = this.props.vm.deleteSound(soundIndex);
-        if (target && name) broadcastSoundDelete(this.props.vm, target.id, soundIndex, name);
         if (soundIndex >= this.state.selectedSoundIndex) {
             this.setState({ selectedSoundIndex: Math.max(0, soundIndex - 1) });
         }
@@ -224,8 +217,6 @@ class SoundTab extends React.Component {
     handleDuplicateSound(soundIndex) {
         this.props.vm.duplicateSound(soundIndex).then(() => {
             this.setState({ selectedSoundIndex: soundIndex + 1 });
-            const targetId = this.props.vm.editingTarget && this.props.vm.editingTarget.id;
-            if (targetId) broadcastSoundAdd(this.props.vm, targetId, soundIndex + 1);
         });
     }
 
@@ -236,7 +227,6 @@ class SoundTab extends React.Component {
         const sprite = this.props.vm.editingTarget.sprite;
         const sounds = sprite.sounds ? sprite.sounds : [];
         this.setState({ selectedSoundIndex: Math.max(sounds.length - 1, 0) });
-        broadcastSoundAdd(this.props.vm, this.props.vm.editingTarget.id);
     }
 
     async handleSurpriseSound() {
@@ -290,16 +280,12 @@ class SoundTab extends React.Component {
 
             this.props.vm.reorderSound(this.props.vm.editingTarget.id,
                 dropInfo.index, dropInfo.newIndex);
-            broadcastSoundOrder(this.props.vm, this.props.vm.editingTarget.id);
 
             this.setState({ selectedSoundIndex: sprite.sounds.indexOf(activeSound) });
         } else if (dropInfo.dragType === DragConstants.BACKPACK_COSTUME) {
             this.props.onActivateCostumesTab();
-            const targetId = this.props.vm.editingTarget && this.props.vm.editingTarget.id;
             this.props.vm.addCostume(dropInfo.payload.body, {
                 name: dropInfo.payload.name
-            }).then(() => {
-                if (targetId) broadcastCostumeAdd(this.props.vm, targetId);
             });
         } else if (dropInfo.dragType === DragConstants.BACKPACK_SOUND) {
             this.props.vm.addSound({

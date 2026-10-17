@@ -4,6 +4,7 @@ import RenderedTarget from 'scratch-vm/src/sprites/rendered-target';
 import {costumeUpload, soundUpload} from './file-uploader';
 const KEY = 'dimodScenes';
 const ASSETS_KEY = 'dimodAssets';
+const quietly = (vm, fn) => (vm.dimodNoSync ? vm.dimodNoSync(fn) : fn());
 const ASSETS_DIR = 'dimodassets/';
 const ANY = '(any scene)';
 const SCENE_OPCODES = {
@@ -701,7 +702,7 @@ const installAssetPrimitives = (runtime, host) => {
         if (!a || a.kind !== 'image' || target.isStage) return undefined;
         const existing = target.getCostumeIndexByName(a.name);
         if (existing >= 0) { target.setCostume(existing); return undefined; }
-        return host.toCostume(a, a.name).then(costume => host.vm.addCostume(costume.md5, costume, target.id));
+        return host.toCostume(a, a.name).then(costume => quietly(host.vm, () => host.vm.addCostume(costume.md5, costume, target.id)));
     };
     p[O.backdrop] = args => {
         const a = find(args);
@@ -709,7 +710,7 @@ const installAssetPrimitives = (runtime, host) => {
         if (!stage || !a || a.kind !== 'image') return undefined;
         const existing = stage.getCostumeIndexByName(a.name);
         if (existing >= 0) { stage.setCostume(existing); return undefined; }
-        return host.toCostume(a, a.name).then(costume => host.vm.addCostume(costume.md5, costume, stage.id));
+        return host.toCostume(a, a.name).then(costume => quietly(host.vm, () => host.vm.addCostume(costume.md5, costume, stage.id)));
     };
     p[O.sound] = (args, util) => {
         const a = find(args);
@@ -717,7 +718,7 @@ const installAssetPrimitives = (runtime, host) => {
         if (!a || a.kind !== 'sound') return undefined;
         const play = () => p.sound_play({SOUND_MENU: a.name}, util);
         if (target.getSounds().some(s => s.name === a.name)) return play();
-        return host.toSound(a, a.name).then(sound => host.vm.addSound(sound, target.id)).then(play);
+        return host.toSound(a, a.name).then(sound => quietly(host.vm, () => host.vm.addSound(sound, target.id))).then(play);
     };
     compatBlocks.statementBlocks.push(O.write, O.costume, O.backdrop, O.sound, O.setSkin, O.clearSkin);
     compatBlocks.outputBlocks.push(O.menu, O.kindMenu, O.text, O.info, O.exists, O.count, O.nameOf, O.url, O.names, O.array,

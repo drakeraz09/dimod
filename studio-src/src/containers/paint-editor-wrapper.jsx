@@ -10,12 +10,11 @@ import {inlineSvgFonts} from 'scratch-svg-renderer';
 import ErrorBoundaryHOC from '../lib/error-boundary-hoc.jsx';
 import {openFontsModal} from '../reducers/modals';
 import {
-    broadcastCostumeUpdate,
-    broadcastCostumeRename,
     flushCostumeBroadcast,
     handleRemotePaintPacket,
     installPaintCollab,
     isApplyingRemotePaint,
+    remotely,
     uninstallPaintCollab
 } from '../lib/dimod-collab';
 
@@ -169,13 +168,7 @@ class PaintEditorWrapper extends React.Component {
         });
     }
     handleUpdateName (name) {
-        const target = this.props.vm.editingTarget;
-        const oldName = target && target.getCostumes()[this.props.selectedCostumeIndex]?.name;
         this.props.vm.renameCostume(this.props.selectedCostumeIndex, name);
-        if (target) {
-            const newName = target.getCostumes()[this.props.selectedCostumeIndex]?.name;
-            broadcastCostumeRename(this.props.vm, target.id, this.props.selectedCostumeIndex, oldName, newName);
-        }
     }
     handleUpdateImage (isVector, image, rotationCenterX, rotationCenterY) {
         flushBeforeTargetSwitch(this.props.vm);
@@ -210,7 +203,9 @@ class PaintEditorWrapper extends React.Component {
         if (!target || target.id !== pending.targetId) return;
         this.applyImage(pending);
     }
-    applyImage ({isVector, image, rotationCenterX, rotationCenterY, remote, costumeIndex}) {
+    applyImage (pending) {
+        if (pending.remote) return remotely(() => this.applyImage({...pending, remote: false}));
+        const {isVector, image, rotationCenterX, rotationCenterY, costumeIndex} = pending;
         if (isVector) {
             this.props.vm.updateSvg(
                 costumeIndex,
@@ -224,11 +219,6 @@ class PaintEditorWrapper extends React.Component {
                 rotationCenterX,
                 rotationCenterY,
                 2 /* bitmapResolution */);
-        }
-        if (!remote) {
-            broadcastCostumeUpdate(
-                this.props.vm, costumeIndex, isVector, image,
-                rotationCenterX, rotationCenterY);
         }
     }
     render () {

@@ -14,10 +14,6 @@ import { emptyCostume } from '../lib/empty-assets';
 import sharedMessages from '../lib/shared-messages';
 import downloadBlob from '../lib/download-blob';
 import {
-    broadcastCostumeAdd,
-    broadcastSoundAdd,
-    broadcastCostumeDelete,
-    broadcastCostumeOrder,
     getRemoteEditedNames,
     clearRemoteEdited
 } from '../lib/dimod-collab';
@@ -245,20 +241,14 @@ class CostumeTab extends React.Component {
         this.setState({ selectedCostumeIndex: costumeIndex });
     }
     handleDeleteCostume(costumeIndex) {
-        const target = this.props.vm.editingTarget;
-        const name = target && target.getCostumes()[costumeIndex]?.name;
         const restoreCostumeFun = this.props.vm.deleteCostume(costumeIndex);
-        if (target && name) broadcastCostumeDelete(this.props.vm, target.id, costumeIndex, name);
         this.props.dispatchUpdateRestore({
             restoreFun: restoreCostumeFun,
             deletedItem: 'Costume'
         });
     }
     handleDuplicateCostume(costumeIndex) {
-        this.props.vm.duplicateCostume(costumeIndex).then(() => {
-            const targetId = this.props.vm.editingTarget && this.props.vm.editingTarget.id;
-            if (targetId) broadcastCostumeAdd(this.props.vm, targetId, costumeIndex + 1);
-        });
+        this.props.vm.duplicateCostume(costumeIndex);
     }
     handleExportCostume(costumeIndex) {
         const item = this.props.vm.editingTarget.sprite.costumes[costumeIndex];
@@ -269,19 +259,13 @@ class CostumeTab extends React.Component {
     }
     handleNewCostume(costume, fromCostumeLibrary, targetId) {
         const costumes = Array.isArray(costume) ? costume : [costume];
-        const broadcastTargetId = targetId || (this.props.vm.editingTarget && this.props.vm.editingTarget.id);
 
-        return Promise.all(costumes.map(c => {
-            const addPromise = fromCostumeLibrary ?
-                this.props.vm.addCostumeFromLibrary(c.md5, c) :
-                // If targetId is falsy, VM should default it to editingTarget.id
-                // However, targetId should be provided to prevent #5876,
-                // if making new costume takes a while
-                this.props.vm.addCostume(c.md5, c, targetId);
-            return addPromise.then(() => {
-                if (broadcastTargetId) broadcastCostumeAdd(this.props.vm, broadcastTargetId);
-            });
-        }));
+        return Promise.all(costumes.map(c => (fromCostumeLibrary ?
+            this.props.vm.addCostumeFromLibrary(c.md5, c) :
+            // If targetId is falsy, VM should default it to editingTarget.id
+            // However, targetId should be provided to prevent #5876,
+            // if making new costume takes a while
+            this.props.vm.addCostume(c.md5, c, targetId))));
     }
     handleNewBlankCostume() {
         const name = this.props.vm.editingTarget.isStage ?
@@ -355,23 +339,16 @@ class CostumeTab extends React.Component {
             const activeCostume = sprite.costumes[this.state.selectedCostumeIndex];
             this.props.vm.reorderCostume(this.props.vm.editingTarget.id,
                 dropInfo.index, dropInfo.newIndex);
-            broadcastCostumeOrder(this.props.vm, this.props.vm.editingTarget.id);
             this.setState({ selectedCostumeIndex: sprite.costumes.indexOf(activeCostume) });
         } else if (dropInfo.dragType === DragConstants.BACKPACK_COSTUME) {
-            const targetId = this.props.vm.editingTarget && this.props.vm.editingTarget.id;
             this.props.vm.addCostume(dropInfo.payload.body, {
                 name: dropInfo.payload.name
-            }).then(() => {
-                if (targetId) broadcastCostumeAdd(this.props.vm, targetId);
             });
         } else if (dropInfo.dragType === DragConstants.BACKPACK_SOUND) {
             this.props.onActivateSoundsTab();
-            const targetId = this.props.vm.editingTarget && this.props.vm.editingTarget.id;
             this.props.vm.addSound({
                 md5: dropInfo.payload.body,
                 name: dropInfo.payload.name
-            }).then(() => {
-                if (targetId) broadcastSoundAdd(this.props.vm, targetId);
             });
         }
     }

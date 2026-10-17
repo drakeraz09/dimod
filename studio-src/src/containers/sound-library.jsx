@@ -259,7 +259,7 @@ class SoundLibrary extends React.PureComponent {
     }
     handleItemSelected (soundItem) {
         if (soundItem.dimodLibraryId) {
-            return addDimodLibraryEntry(this.props.vm, 'sound', soundItem, {broadcast: false})
+            return addDimodLibraryEntry(this.props.vm, 'sound', soundItem)
                 .then(() => this.props.onNewSound(), err => showErrorToast(err, 'Library'));
         }
         const vmSound = {

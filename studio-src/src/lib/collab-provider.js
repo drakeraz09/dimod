@@ -12,7 +12,7 @@ const CHUNK_THRESHOLD_CHARS = 1024 * 1024;
 const CHUNK_SIZE_CHARS = 768 * 1024;
 const MAX_CHUNKED_CHARS = 48 * 1024 * 1024;
 const CHUNK_STALE_MS = 60 * 1000;
-const CHUNKABLE_TYPES = new Set(['asset-update', 'blocks-state']);
+const CHUNKABLE_TYPES = new Set(['asset-update', 'blocks-state', 'dasset-patch', 'scene-state']);
 
 class CollabProvider {
     constructor (projectId, token) {

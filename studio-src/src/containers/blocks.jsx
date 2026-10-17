@@ -175,6 +175,12 @@ const WORKSPACE_HEALTH_CHECK_MS = 2500;
 const BLOCK_STATE_REPLY_TIMEOUT_MS = 8000;
 const WORKSPACE_HEALTH_MISMATCH_THRESHOLD = 3;
 const WORKSPACE_HEALTH_WARMUP_MS = 15000;
+const WORKSPACE_HEALTH_LOCAL_QUIET_MS = 6000;
+const editAges = at => {
+    const out = {};
+    for (const id in at || {}) out[id] = Date.now() - at[id];
+    return out;
+};
 const LOCAL_MISMATCH_REPAIR_THRESHOLD = 2;
 const WORKSPACE_HEALTH_RUN_GRACE_MS = 3000;
 const WORKSPACE_RESYNC_COOLDOWN_MS = 5 * 60 * 1000;
@@ -835,6 +841,14 @@ class Blocks extends React.Component {
         } else if (eventJson.type.startsWith('comment_')) {
             preparedEvent = commentEventForVm(eventJson);
             if (!preparedEvent) return;
+        } else if (eventJson.type === 'move') {
+            const moving = otherTarget.blocks.getBlock(eventJson.blockId);
+            if (!moving) return;
+            const oldParent = moving.parent ? otherTarget.blocks.getBlock(moving.parent) : null;
+            const oldInput = oldParent ? Object.keys(oldParent.inputs).find(k => oldParent.inputs[k].block === moving.id) : undefined;
+            const xy = typeof eventJson.newCoordinate === 'string' ? eventJson.newCoordinate.split(',').map(Number) : null;
+            preparedEvent = {...eventJson, oldParentId: oldParent ? oldParent.id : undefined, oldInputName: oldInput,
+                newCoordinate: xy && xy.length === 2 && xy.every(Number.isFinite) ? {x: xy[0], y: xy[1]} : undefined};
         }
         const varStage = runtime.getTargetForStage();
         const wasGlobalVar = eventJson.type.startsWith('var_') && varStage &&
@@ -1091,6 +1105,8 @@ class Blocks extends React.Component {
             hash: this.workspaceHealthHash(target),
             hashes: allTargetHashes(vm),
             targetEditAt: this._localTargetEditAt || {},
+            targetEditAge: editAges(this._localTargetEditAt),
+            lastEditAge: getLastLocalEditAt() ? Date.now() - getLastLocalEditAt() : null,
             lastEditAt: getLastLocalEditAt()
         });
     }
@@ -1117,16 +1133,37 @@ class Blocks extends React.Component {
                 continue;
             }
             const prev = streaks[targetId];
-            const mismatchStreak = ((prev && prev.hash === theirHash && prev.mismatchStreak) || 0) + 1;
-            streaks[targetId] = {hash: theirHash, mismatchStreak};
+            const mine = targetBlocksHash(target);
+            const editedAt = (this._localTargetEditAt && this._localTargetEditAt[targetId]) || 0;
+            const settled = Date.now() - editedAt > WORKSPACE_HEALTH_LOCAL_QUIET_MS;
+            const mismatchStreak = settled ? ((prev && prev.hash === theirHash && prev.mine === mine &&
+                prev.mismatchStreak) || 0) + 1 : 0;
+            streaks[targetId] = {hash: theirHash, mine, mismatchStreak};
             if (mismatchStreak < WORKSPACE_HEALTH_MISMATCH_THRESHOLD) continue;
-            streaks[targetId] = {hash: theirHash, mismatchStreak: 0};
+            streaks[targetId] = {hash: theirHash, mine, mismatchStreak: 0};
             if (!this.isStalerThan(payload, fromUserId, targetId)) continue;
             this.requestPeerBlocks(target, payload);
         }
     }
     isStalerThan (payload, fromUserId, targetId) {
         const mine = (this._localTargetEditAt && this._localTargetEditAt[targetId]) || 0;
+        if (payload.targetEditAge && typeof payload.targetEditAge === 'object') {
+            const theirAge = Number(payload.targetEditAge[targetId]);
+            const hasTheirs = Number.isFinite(theirAge);
+            if (!mine || !hasTheirs) {
+                if (mine || hasTheirs) return !mine;
+            } else {
+                const myAge = Date.now() - mine;
+                if (Math.abs(myAge - theirAge) > 250) return myAge > theirAge;
+            }
+            const myLast = getLastLocalEditAt();
+            const theirLast = Number(payload.lastEditAge);
+            if (myLast && Number.isFinite(theirLast) && Math.abs(Date.now() - myLast - theirLast) > 250) {
+                return Date.now() - myLast > theirLast;
+            }
+            const tab = window.dimodCollab ? window.dimodCollab.tabId : '';
+            return `${getDimodUserId() || ''}|${tab}` < `${fromUserId || ''}|${payload.fromTab || ''}`;
+        }
         const theirs = Number(payload.targetEditAt && payload.targetEditAt[targetId]) || 0;
         if (mine !== theirs) return mine < theirs;
         const theirLastEdit = Number(payload.lastEditAt) || 0;
@@ -1147,7 +1184,7 @@ class Blocks extends React.Component {
                 'falling back to the last save');
             this.resyncFromSave(payload);
         }, BLOCK_STATE_REPLY_TIMEOUT_MS);
-        this._pendingBlockStates.set(target.id, {timer});
+        this._pendingBlockStates.set(target.id, {timer, editedAt: (this._localTargetEditAt || {})[target.id] || 0});
         log.warn(`${target.getName()} is out of sync with ${payload.fromUsername || 'a peer'} - ` +
             'fetching their live copy');
         window.dimodCollab.send('blocks-state-request', {targetId: target.id, toTab: payload.fromTab});
@@ -1159,6 +1196,7 @@ class Blocks extends React.Component {
         if (!pending) return;
         clearTimeout(pending.timer);
         this._pendingBlockStates.delete(msg.targetId);
+        if (((this._localTargetEditAt || {})[msg.targetId] || 0) !== pending.editedAt) return;
         const vm = this.props.vm;
         const onScreen = vm.editingTarget && vm.editingTarget.id === msg.targetId;
         if (this.isProjectRunning() || (onScreen && (hasActiveGesture(this.workspace) ||
