@@ -400,6 +400,12 @@ class Blocks extends React.Component {
         );
         addFullscreenZoomControl(this.ScratchBlocks.ZoomControls);
         this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
+        if (window.ResizeObserver) { // hack: blockly only resizes on window resize, so layout shifts cut the code area off
+            this.sizeObserver = new ResizeObserver(() => {
+                if (this.workspace && this.props.isVisible) this.ScratchBlocks.svgResize(this.workspace);
+            });
+            this.sizeObserver.observe(this.blocks);
+        }
         this.offFieldCarets = registerFieldCaretScope(
             'code',
             () => this.workspace,
@@ -559,6 +565,7 @@ class Blocks extends React.Component {
         }
     }
     componentWillUnmount () {
+        if (this.sizeObserver) this.sizeObserver.disconnect();
         this.repairAskewBlocksSoon.cancel();
         if (this.offFieldCarets) this.offFieldCarets();
         if (this.offFontChanged) {
