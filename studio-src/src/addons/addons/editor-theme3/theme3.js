@@ -233,6 +233,7 @@ export default async function ({ addon, console }) {
     if (this.sourceBlock_.isShadow()) return;
     // Labels in custom block editor
     this.box_.setAttribute("fill", fieldBackground(this));
+    if (!addon.self.disabled) this.textElement_.style.setProperty("fill", textColor(this), "important");
   };
 
   const oldFieldDropdownInit = Blockly.FieldDropdown.prototype.init;
