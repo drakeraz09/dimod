@@ -257,7 +257,7 @@ DimodSwatchesComponent.propTypes = {
     swatches: PropTypes.arrayOf(swatchShape).isRequired
 };
 DimodSwatchesComponent.defaultProps = {canAdd: true, compact: false, lock: false, swatches: []};
-const dimodSwatches = injectIntl(DimodSwatchesComponent);
+const DimodSwatchesView = injectIntl(DimodSwatchesComponent);
 const messages$1 = defineMessages({
     remove: {
         defaultMessage: 'Delete this palette',
@@ -528,7 +528,7 @@ PaletteSaveDialog.propTypes = {
 };
 const WrappedOpen = injectIntl(PaletteOpenDialog);
 const WrappedSave = injectIntl(PaletteSaveDialog);
-export {Chip, dimodSwatches as DimodSwatches, WrappedOpen as PaletteOpenDialog, PaletteRow, WrappedSave as PaletteSaveDialog, describe, paletteShape as paletteDialogsPaletteShape, paletteShape$1 as paletteRowPaletteShape};
+export {Chip, DimodSwatchesView as DimodSwatches, WrappedOpen as PaletteOpenDialog, PaletteRow, WrappedSave as PaletteSaveDialog, describe, paletteShape as paletteDialogsPaletteShape, paletteShape$1 as paletteRowPaletteShape};
 class DimodSwatches extends React.Component {
     constructor (props) {
         super(props);
@@ -642,7 +642,7 @@ class DimodSwatches extends React.Component {
                         onSave={this.handleSavePalette}
                     />
                 ) : null}
-                <dimodSwatches
+                <DimodSwatchesView
                     activeKey={current ? styleKey(current) : null}
                     canAdd={Boolean(current)}
                     onCollect={this.handleCollect}
