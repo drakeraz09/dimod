@@ -6,7 +6,7 @@ import {getSelectedLeafItems} from '../helper/selection';
 import Formats, {isVector, isBitmap} from '../lib/format';
 import log from '../log/log';
 import {getPaintingLayer, rebuildIndex} from '../dimod/store';
-import {remoteSeq, replayRemoteOpsSince, pendingRasters, whenRastersLoaded} from '../dimod/collab';
+import {remoteSeq, replayRemoteOpsSince, pendingRasters, whenRastersLoaded, takeTouched, restoreMine} from '../dimod/collab';
 import {takeHistoryLabel} from '../dimod/core';
 import {restoreInPlace, noteRestored} from '../dimod/render';
 
@@ -19,6 +19,7 @@ const performSnapshot = function (dispatchPerformSnapshot, format) {
         json: paper.project.exportJSON({asString: false}),
         paintEditorFormat: format,
         remoteSeq: remoteSeq(),
+        collab: isVector(format) ? takeTouched() : null,
         label: takeHistoryLabel(),
         time: Date.now()
     };
@@ -42,7 +43,13 @@ const _restoreInFull = function (entry) {
     showGuideLayers(hideGuideLayers());
 };
 
-const _restore = function (entry, fromEntry, setSelectedItems, onUpdateImage, isBitmapMode) {
+const _restore = function (entry, fromEntry, setSelectedItems, onUpdateImage, isBitmapMode, step) {
+    if (step && !isBitmapMode && isVector(entry.paintEditorFormat) && restoreMine(entry, fromEntry)) {
+        setSelectedItems();
+        whenRastersLoaded(pendingRasters(getPaintingLayer()))
+            .then(() => { onUpdateImage(true /* skipSnapshot */); takeTouched(); });
+        return;
+    }
     const inPlace = !isBitmapMode && fromEntry && isVector(fromEntry.paintEditorFormat) &&
         restoreInPlace(entry);
     if (!inPlace) _restoreInFull(entry);
@@ -92,7 +99,7 @@ const performUndo = function (undoState, dispatchPerformUndo, setSelectedItems, 
     if (undoState.pointer > 0) {
         const state = undoState.stack[undoState.pointer - 1];
         _restore(state, undoState.stack[undoState.pointer], setSelectedItems, onUpdateImage,
-            isBitmap(state.paintEditorFormat));
+            isBitmap(state.paintEditorFormat), true);
         const format = isVector(state.paintEditorFormat) ? Formats.VECTOR_SKIP_CONVERT :
             isBitmap(state.paintEditorFormat) ? Formats.BITMAP_SKIP_CONVERT : null;
         dispatchPerformUndo(format);
@@ -104,7 +111,7 @@ const performRedo = function (undoState, dispatchPerformRedo, setSelectedItems, 
     if (undoState.pointer >= 0 && undoState.pointer < undoState.stack.length - 1) {
         const state = undoState.stack[undoState.pointer + 1];
         _restore(state, undoState.stack[undoState.pointer], setSelectedItems, onUpdateImage,
-            isBitmap(state.paintEditorFormat));
+            isBitmap(state.paintEditorFormat), true);
         const format = isVector(state.paintEditorFormat) ? Formats.VECTOR_SKIP_CONVERT :
             isBitmap(state.paintEditorFormat) ? Formats.BITMAP_SKIP_CONVERT : null;
         dispatchPerformRedo(format);

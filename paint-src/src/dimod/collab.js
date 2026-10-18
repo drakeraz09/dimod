@@ -30,6 +30,7 @@ let _remoteLog = [];
 let _remoteSeq = 0;
 let _gesture = null;
 let _liveSource = null;
+let _touched = new Set();
 const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
 let _previewTimer = null;
 const _peers = new Map();
@@ -67,6 +68,7 @@ const stopGesture = function () {
     _gesture = null;
 };
 const isCollabActive = () => !!_transport;
+const isBusy = () => !!_transport && !!_transport.busy && _transport.busy();
 const send = function (packet) {
     if (!_transport || !_costume) return;
     _transport.send(Object.assign({v: PROTOCOL, targetId: _costume.targetId, costumeIndex: _costume.costumeIndex}, packet));
@@ -124,6 +126,7 @@ const resetCollab = function () {
     _baselineDoc = null;
     _remoteLog = [];
     _remoteSeq = 0;
+    _touched = new Set();
     _lastSelectionKey = null;
     _bitmapBase = null;
     _patchState = {pid: null, clean: true};
@@ -137,6 +140,7 @@ const contentItems = function () {
     return layer.children.filter(item => !item.guide && !item.isClipMask());
 };
 const PORTABLE_SOURCE = /^data:/i;
+const _dataUrls = new Map();
 const portableSources = function (item) {
     const map = new Map();
     const visit = node => {
@@ -144,7 +148,13 @@ const portableSources = function (item) {
         if (node instanceof paper.Raster) {
             const src = node.image && node.image.src;
             if (src && !PORTABLE_SOURCE.test(src) && !map.has(src)) {
-                try { map.set(src, node.toDataURL()); } catch (e) {
+                if (_dataUrls.has(src)) { map.set(src, _dataUrls.get(src)); } else {
+                    try {
+                        if (_dataUrls.size > 64) _dataUrls.clear();
+                        _dataUrls.set(src, node.toDataURL());
+                        map.set(src, _dataUrls.get(src));
+                    } catch (e) {
+                    }
                 }
             }
         }
@@ -223,10 +233,56 @@ const usedBrushes = function () {
     contentItems().forEach(visit);
     return out.size ? [...out.values()] : undefined;
 };
+const noteTouched = function (ops) {
+    for (const o of ops) {
+        if (o.did) _touched.add(o.did); else if (o.op === 'doc') _touched.add('#doc');
+    }
+};
+const takeTouched = function () {
+    if (!isCollabActive() || _baseline === null) return null;
+    noteTouched(diffAgainstBaseline());
+    const touched = [..._touched];
+    _touched = new Set();
+    return {touched, doc: serializeDoc(getDoc())};
+};
+const paintingChildren = function (json) {
+    for (const layer of json || []) {
+        if (layer && layer[1] && layer[1].data && layer[1].data.isPaintingLayer) return layer[1].children || [];
+    }
+    return [];
+};
+const restoreMine = function (entry, fromEntry) {
+    const layer = getPaintingLayer();
+    if (!isCollabActive() || !layer || !entry.collab || !fromEntry || !fromEntry.collab) return false;
+    const dids = (entry.time > fromEntry.time ? entry : fromEntry).collab.touched;
+    const want = new Map();
+    paintingChildren(entry.json).forEach((json, index) => {
+        const did = json && json[1] && json[1].data && json[1].data.did;
+        if (did) want.set(did, {json, index});
+    });
+    for (const did of dids) {
+        if (did === '#doc') { applyDoc(entry.collab.doc); continue; }
+        const live = getItemByDid(did);
+        const w = want.get(did);
+        if (!w) { if (live) live.remove(); continue; }
+        const item = importItem(w.json);
+        if (!item) continue;
+        if (live) { live.replaceWith(item); continue; }
+        const content = contentItems();
+        if (w.index < content.length) { item.insertBelow(content[w.index]); } else { layer.addChild(item); }
+    }
+    rebuildIndex();
+    if (_docDirty) {
+        _docDirty = false;
+        if (_docHost && _docHost.syncStores) _docHost.syncStores();
+    }
+    return true;
+};
 const commitLocalChanges = function (isVector) {
     if (!isCollabActive() || _applyingRemote || !isVector) return;
     if (_baseline === null) { send(Object.assign(buildReset(), {brushes: usedBrushes()})); captureBaseline(); return; }
     const ops = diffAgainstBaseline();
+    noteTouched(ops);
     captureBaseline();
     if (ops.length) { send({op: 'ops', ops, brushes: usedBrushes()}); renewGesture(); }
 };
@@ -235,6 +291,7 @@ const liveCommit = function (isVector) {
     if (_liveTimer || !isCollabActive() || !isVector) return;
     _liveTimer = setTimeout(() => {
         _liveTimer = null;
+        if (isBusy()) { liveCommit(isVector); return; }
         commitLocalChanges(true);
     }, 70);
 };
@@ -260,7 +317,7 @@ const applyOp = function (op, imported = []) {
     }
     if (op.op === 'modify') {
         const existing = getItemByDid(op.did);
-        if (!existing) return false;
+        if (!existing) return applyOp({op: 'add', did: op.did, index: 1e9, json: op.json}, imported);
         const item = importItem(op.json);
         if (!item) return true;
         imported.push(item);
@@ -269,7 +326,7 @@ const applyOp = function (op, imported = []) {
     }
     if (op.op === 'remove') {
         const existing = getItemByDid(op.did);
-        if (!existing) return false;
+        if (!existing) return true;
         existing.remove();
         return true;
     }
@@ -647,7 +704,7 @@ const sampleTiles = function (out) {
     if (replace) out.set = tile; else out.tiles = [tile];
 };
 const sendPreview = function () {
-    if (!isCollabActive() || !_gesture) return;
+    if (!isCollabActive() || !_gesture || isBusy()) return;
     const g = _gesture;
     const out = {g: g.id, tool: g.tool};
     let changed = false;
@@ -869,6 +926,8 @@ export {
     setCollabCostume,
     resetCollab,
     commitLocalChanges,
+    takeTouched,
+    restoreMine,
     liveCommit,
     setLivePreviewSource,
     receivePacket,

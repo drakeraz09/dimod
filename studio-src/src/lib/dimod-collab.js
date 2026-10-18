@@ -162,7 +162,8 @@ const installPaintCollab = ({targetId, costumeIndex}) => {
             if (packet.op === 'preview' || packet.op === 'preview-end') {
                 collab.sendPaintPreview(packet);
             } else if (packet.op === 'cursor' || packet.op === 'selection') { collab.sendPaintCursor(packet); } else { collab.sendPaintOp(packet); }
-        }
+        },
+        busy: () => !!window.dimodCollab && !!window.dimodCollab.isBacklogged && window.dimodCollab.isBacklogged()
     });
     PaintCollab.setCollabCostume({targetId, costumeIndex});
     installedFor = {targetId, costumeIndex};

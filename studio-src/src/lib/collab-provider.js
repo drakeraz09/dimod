@@ -224,8 +224,13 @@ class CollabProvider {
         this.sendRaw(type, str);
     }
 
+    isBacklogged () {
+        return !!this.connection && this.connection.bufferedAmount > 256 * 1024;
+    }
+
     sendRaw (type, str) {
         if (this.connection && this.connection.readyState === WebSocket.OPEN && this.joined) {
+            if (STALE_WHEN_QUEUED.has(type) && this.isBacklogged()) return;
             this.connection.send(str);
         } else if (!STALE_WHEN_QUEUED.has(type)) {
             this.queuedData.push(str);
