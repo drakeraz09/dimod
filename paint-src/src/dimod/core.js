@@ -592,6 +592,20 @@ const brushSkinSvg = (doc, item, ls, built, color) => {
     }
     return skin;
 };
+const stampPathData = built => {
+    const kids = built.src.tip.children || [built.src.tip];
+    let d = '';
+    for (const {x, y, s, a} of built.stamps) {
+        const m = new paper.Matrix().translate(x, y).rotate(a, 0, 0).scale(s, s);
+        for (const kid of kids) {
+            if (!kid.segments || !kid.segments.length) continue;
+            const clone = new paper.Path({segments: kid.segments.map(seg => seg.clone()), closed: true, insert: false});
+            clone.transform(m);
+            d += clone.getPathData(null, 2);
+        }
+    }
+    return d;
+};
 const bakeBrush = item => {
     const ls = brushOf(item);
     const built = ls ? brushStamps(item, ls) : null;
@@ -692,10 +706,10 @@ const drawProfiled = Klass => {
         if (skin.fill) skin.fill._draw(ctx, param, viewMatrix, strokeMatrix);
         if (skin.path2d) {
             if (strokeMatrix) { ctx.save(); strokeMatrix.applyToContext(ctx); }
-            ctx.fillStyle = skin.color;
+            ctx.fillStyle = this.strokeColor.toCanvasStyle(ctx, this._matrix, strokeMatrix);
             ctx.fill(skin.path2d);
             if (strokeMatrix) ctx.restore();
-        } else { skin.outline._draw(ctx, param, viewMatrix, strokeMatrix); }
+        } else { skin.outline.fillColor = this.strokeColor; skin.outline._draw(ctx, param, viewMatrix, strokeMatrix); }
     };
 };
 drawProfiled(paper.Path);
@@ -714,19 +728,20 @@ const profileOnExport = (item, node) => {
     const shape = brush ? null : profileShape(item, profile);
     if (!built && !shape) return node;
     const doc = node.ownerDocument;
+    const paint = node.getAttribute('stroke') || solidCss(item.strokeColor);
+    const alpha = node.getAttribute('stroke-opacity');
+    const flat = built && (item.strokeColor.type === 'gradient' || item.strokeColor.alpha < 1);
     const group = doc.createElementNS(SVG_NS, 'g');
     if (profile) group.setAttribute('data-dimod-profile', profile);
     if (brush) group.setAttribute('data-dimod-brush', JSON.stringify(brush));
     node.setAttribute('stroke', 'none');
-    const skin = built ? brushSkinSvg(doc, item, brush, built, solidCss(item.strokeColor)) :
+    const skin = built && !flat ? brushSkinSvg(doc, item, brush, built, paint) :
         doc.createElementNS(SVG_NS, 'path');
     if (shape) skin.setAttribute('d', shape.getPathData(null, 3));
+    if (flat) skin.setAttribute('d', stampPathData(built));
     if (node.getAttribute('transform')) skin.setAttribute('transform', node.getAttribute('transform'));
-    skin.setAttribute('fill', solidCss(item.strokeColor));
-    if (item.strokeColor.alpha < 1) {
-        skin.setAttribute('fill-opacity', String(item.strokeColor.alpha));
-        skin.setAttribute('stroke-opacity', String(item.strokeColor.alpha));
-    }
+    skin.setAttribute('fill', paint);
+    if (alpha && alpha !== '1') skin.setAttribute('fill-opacity', alpha);
     skin.setAttribute('stroke', 'none');
     skin.setAttribute('data-dimod-profile-skin', '1');
     group.appendChild(node);

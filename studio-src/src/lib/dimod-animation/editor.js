@@ -4184,7 +4184,8 @@ class Timeline {
     }
     if (!tr || !tr.keyframes.length) return;
     const kfs = tr.keyframes;
-    const disc = isDiscrete(r.key);
+    const disc = isDiscrete(r.key) && r.key !== "costume";
+    const lbl = isDiscrete(r.key);
     for (let i = 0; i < kfs.length - 1; i++) {
       const a = kfs[i], b = kfs[i + 1];
       if (b.sec < t0 || a.sec > t1) continue;
@@ -4194,7 +4195,7 @@ class Timeline {
         ctx.fillStyle = hexA(color, disc || !same ? 0.14 : 0.08);
         ctx.fillRect(xa, y + 2, xb - xa, r.h - 4);
         this.holdEnd(ctx, xb, y, r.h, color);
-        if (disc) this.drawValueLabel(ctx, r.key, a.value, xa + 6, cy, xb - xa - 10);
+        if (lbl) this.drawValueLabel(ctx, r.key, a.value, xa + 6, cy, xb - xa - 10);
         continue;
       }
       ctx.fillStyle = hexA(color, 0.2);
@@ -6382,7 +6383,7 @@ class Editor {
     if (!infos.length) return;
     st.mutate("Set easing", () => {
       for (const i of infos) {
-        if (i.kind === "track" && (TD[i.key].kind === "disc" || TD[i.key].kind === "costume") && ease !== "Step") continue;
+        if (i.kind === "track" && TD[i.key].kind === "disc" && ease !== "Step") continue;
         if (ease === "Bezier" && i.kf.ease !== "Bezier") i.kf.bez = i.kf.bez || [0.42, 0, 0.58, 1];
         i.kf.ease = ease;
         if (ease !== "Bezier") delete i.kf.bez;
