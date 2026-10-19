@@ -30,7 +30,7 @@ let _remoteLog = [];
 let _remoteSeq = 0;
 let _gesture = null;
 let _liveSource = null;
-let _touched = new Set();
+let _touched = new Map();
 const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
 let _previewTimer = null;
 const _peers = new Map();
@@ -126,7 +126,7 @@ const resetCollab = function () {
     _baselineDoc = null;
     _remoteLog = [];
     _remoteSeq = 0;
-    _touched = new Set();
+    _touched = new Map();
     _lastSelectionKey = null;
     _bitmapBase = null;
     _patchState = {pid: null, clean: true};
@@ -235,41 +235,42 @@ const usedBrushes = function () {
 };
 const noteTouched = function (ops) {
     for (const o of ops) {
-        if (o.did) _touched.add(o.did); else if (o.op === 'doc') _touched.add('#doc');
+        const did = o.did || (o.op === 'doc' ? '#doc' : null);
+        if (!did || _touched.has(did)) continue;
+        if (did === '#doc') { _touched.set(did, {json: _baselineDoc}); continue; }
+        _touched.set(did, {json: _baseline.has(did) ? _baseline.get(did) : null, index: _baselineOrder.indexOf(did)});
     }
 };
 const takeTouched = function () {
     if (!isCollabActive() || _baseline === null) return null;
     noteTouched(diffAgainstBaseline());
-    const touched = [..._touched];
-    _touched = new Set();
-    return {touched, doc: serializeDoc(getDoc())};
-};
-const paintingChildren = function (json) {
-    for (const layer of json || []) {
-        if (layer && layer[1] && layer[1].data && layer[1].data.isPaintingLayer) return layer[1].children || [];
+    const before = {};
+    const after = {};
+    const content = contentItems();
+    for (const [did, was] of _touched) {
+        before[did] = was;
+        if (did === '#doc') { after[did] = {json: serializeDoc(getDoc())}; continue; }
+        const item = getItemByDid(did);
+        after[did] = item ? {json: JSON.stringify(serializeItem(item)), index: content.indexOf(item)} : {json: null};
     }
-    return [];
+    _touched = new Map();
+    return {before, after};
 };
 const restoreMine = function (entry, fromEntry) {
     const layer = getPaintingLayer();
     if (!isCollabActive() || !layer || !entry.collab || !fromEntry || !fromEntry.collab) return false;
-    const dids = (entry.time > fromEntry.time ? entry : fromEntry).collab.touched;
-    const want = new Map();
-    paintingChildren(entry.json).forEach((json, index) => {
-        const did = json && json[1] && json[1].data && json[1].data.did;
-        if (did) want.set(did, {json, index});
-    });
-    for (const did of dids) {
-        if (did === '#doc') { applyDoc(entry.collab.doc); continue; }
+    const forward = entry.time > fromEntry.time;
+    const states = forward ? entry.collab.after : fromEntry.collab.before;
+    for (const did of Object.keys(states)) {
+        const w = states[did];
+        if (did === '#doc') { if (w.json) applyDoc(w.json); continue; }
         const live = getItemByDid(did);
-        const w = want.get(did);
-        if (!w) { if (live) live.remove(); continue; }
-        const item = importItem(w.json);
+        if (!w.json) { if (live) live.remove(); continue; }
+        const item = importItem(JSON.parse(w.json));
         if (!item) continue;
         if (live) { live.replaceWith(item); continue; }
         const content = contentItems();
-        if (w.index < content.length) { item.insertBelow(content[w.index]); } else { layer.addChild(item); }
+        if (w.index >= 0 && w.index < content.length) { item.insertBelow(content[w.index]); } else { layer.addChild(item); }
     }
     rebuildIndex();
     if (_docDirty) {
