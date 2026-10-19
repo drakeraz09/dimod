@@ -8,7 +8,7 @@ const isDimodEmbed = typeof location !== 'undefined' && location.pathname.endsWi
 const dimodHeaderHidden = () => {
     if (typeof location === 'undefined') return false;
     const params = new URLSearchParams(location.search);
-    if (!params.has('dimod_id')) return false;
+    if (!params.has('dimod_id') && !params.has('dimod_playtest')) return false;
     return !['dimod_show_greenflag', 'dimod_show_pause', 'dimod_show_stopall', 'dimod_show_fullscreen']
         .some(key => params.get(key) === '1');
 };

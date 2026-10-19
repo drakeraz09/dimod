@@ -14,7 +14,7 @@ import styles from './controls.css';
 
 const dimodParams = typeof URLSearchParams === 'undefined' ? null : new URLSearchParams(location.search);
 const dimodShow = key => {
-    if (!dimodParams || !dimodParams.has('dimod_id')) return true;
+    if (!dimodParams || !(dimodParams.has('dimod_id') || dimodParams.has('dimod_playtest'))) return true;
     return dimodParams.get(key) === '1';
 };
 

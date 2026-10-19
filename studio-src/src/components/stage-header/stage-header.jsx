@@ -122,7 +122,7 @@ const StageHeaderComponent = function (props) {
             </Button>
         ) : null;
         const dimodParams = typeof URLSearchParams === 'undefined' ? null : new URLSearchParams(location.search);
-        const dimodIsEmbed = dimodParams && dimodParams.has('dimod_id');
+        const dimodIsEmbed = dimodParams && (dimodParams.has('dimod_id') || dimodParams.has('dimod_playtest'));
         const dimodShowFullscreenButton = !dimodParams || !dimodIsEmbed
             ? true
             : dimodParams.get('dimod_show_fullscreen') === '1';
