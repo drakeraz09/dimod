@@ -6,7 +6,7 @@ import {getSelectedLeafItems} from '../helper/selection';
 import Formats, {isVector, isBitmap} from '../lib/format';
 import log from '../log/log';
 import {getPaintingLayer, rebuildIndex} from '../dimod/store';
-import {remoteSeq, replayRemoteOpsSince, pendingRasters, whenRastersLoaded, takeTouched, restoreMine} from '../dimod/collab';
+import {remoteSeq, replayRemoteOpsSince, pendingRasters, whenRastersLoaded, takeTouched, restoreMine, isCollabActive} from '../dimod/collab';
 import {takeHistoryLabel} from '../dimod/core';
 import {restoreInPlace, noteRestored} from '../dimod/render';
 
@@ -44,7 +44,11 @@ const _restoreInFull = function (entry) {
 };
 
 const _restore = function (entry, fromEntry, setSelectedItems, onUpdateImage, isBitmapMode, step) {
-    if (step && !isBitmapMode && isVector(entry.paintEditorFormat) && restoreMine(entry, fromEntry)) {
+    const live = !isBitmapMode && isVector(entry.paintEditorFormat) && fromEntry &&
+        isVector(fromEntry.paintEditorFormat) && isCollabActive();
+    if (live) {
+        if (step) restoreMine(entry, fromEntry);
+        else for (const [a, b] of fromEntry.path || []) restoreMine(a, b);
         setSelectedItems();
         whenRastersLoaded(pendingRasters(getPaintingLayer()))
             .then(() => { onUpdateImage(true /* skipSnapshot */); takeTouched(); });
@@ -121,7 +125,10 @@ const performRedo = function (undoState, dispatchPerformRedo, setSelectedItems, 
 const performGoto = function (undoState, index, dispatchPerformGoto, setSelectedItems, onUpdateImage) {
     if (index < 0 || index >= undoState.stack.length || index === undoState.pointer) return;
     const state = undoState.stack[index];
-    _restore(state, undoState.stack[undoState.pointer], setSelectedItems, onUpdateImage,
+    const dir = index < undoState.pointer ? -1 : 1;
+    const path = [];
+    for (let i = undoState.pointer; i !== index; i += dir) path.push([undoState.stack[i + dir], undoState.stack[i]]);
+    _restore(state, Object.assign({}, undoState.stack[undoState.pointer], {path}), setSelectedItems, onUpdateImage,
         isBitmap(state.paintEditorFormat));
     const format = isVector(state.paintEditorFormat) ? Formats.VECTOR_SKIP_CONVERT :
         isBitmap(state.paintEditorFormat) ? Formats.BITMAP_SKIP_CONVERT : null;

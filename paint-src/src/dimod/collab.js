@@ -35,6 +35,8 @@ let _taken = new Map();
 let _clock = 0;
 let _stamps = new Map();
 let _held = [];
+let _askedAt = 0;
+const askResync = function () { _askedAt = Date.now(); send({op: 'resync-request'}); };
 const laterStamp = (a, b) => !b || a.v > b.v || (a.v === b.v && a.w > b.w);
 const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
 let _previewTimer = null;
@@ -202,7 +204,7 @@ const captureBaseline = function () {
 };
 const buildReset = function () {
     const items = identifiedItems().map(({did, item}) => ({did, json: serializeItem(item)}));
-    return {op: 'reset', items, doc: serializeDoc(getDoc())};
+    return {op: 'reset', items, doc: serializeDoc(getDoc()), clock: _clock};
 };
 const diffAgainstBaseline = function () {
     const ops = [];
@@ -253,7 +255,8 @@ const noteTouched = function (ops) {
     }
 };
 const takeTouched = function () {
-    if (!isCollabActive() || _baseline === null) return null;
+    if (_baseline === null) { captureBaseline(); _touched = new Map(); return null; }
+    if (!isCollabActive()) return null;
     noteTouched(diffAgainstBaseline());
     const before = {};
     const after = {};
@@ -273,10 +276,13 @@ const restoreMine = function (entry, fromEntry) {
     if (!isCollabActive() || !layer || !entry.collab || !fromEntry || !fromEntry.collab) return false;
     const forward = entry.time > fromEntry.time;
     const states = forward ? entry.collab.after : fromEntry.collab.before;
+    const left = forward ? entry.collab.before : fromEntry.collab.after;
     for (const did of Object.keys(states)) {
         const w = states[did];
         if (did === '#doc') { if (w.json) applyDoc(w.json); continue; }
         const live = getItemByDid(did);
+        const now = live ? JSON.stringify(serializeItem(live)) : null;
+        if (left[did] && now !== left[did].json) continue;
         if (!w.json) { if (live) live.remove(); continue; }
         const item = importItem(JSON.parse(w.json));
         if (!item) continue;
@@ -293,7 +299,7 @@ const restoreMine = function (entry, fromEntry) {
 };
 const commitLocalChanges = function (isVector) {
     if (!isCollabActive() || _applyingRemote || !isVector) return;
-    if (_baseline === null) { send(Object.assign(buildReset(), {brushes: usedBrushes()})); captureBaseline(); return; }
+    if (_baseline === null) { captureBaseline(); return; }
     const ops = diffAgainstBaseline();
     noteTouched(ops);
     _taken = new Map();
@@ -510,7 +516,18 @@ const receivePacket = function (packet, fromId) {
     }
     if (Array.isArray(packet.brushes)) packet.brushes.slice(0, 20).forEach(addRemoteBrush);
     if (packet.op === 'reset') {
+        if (!_askedAt || Date.now() - _askedAt > 5000) return;
+        _askedAt = 0;
+        const seen = Number(packet.clock) || 0;
+        const keep = [];
+        identifiedItems().forEach(({did, item}, index) => {
+            const st = _stamps.get(did);
+            if (st && st.v > seen) keep.push({did, index, json: serializeItem(item)});
+        });
+        const gone = new Set(packet.items.map(e => getDid(e.json && e.json[1] ? {data: e.json[1].data} : null)).filter(Boolean));
         applyOps([{op: 'reset', items: packet.items, doc: packet.doc}], {log: true});
+        for (const k of keep) applyOps([{op: gone.has(k.did) ? 'modify' : 'add', did: k.did, index: k.index, json: k.json}], {log: true});
+        if (seen > _clock) _clock = seen;
         clearPeerPreview(fromId);
         return;
     }
@@ -530,7 +547,7 @@ const applyRemoteOps = function (packet, fromId) {
     });
     if (ops.length) {
         const complete = applyOps(ops, {log: true});
-        if (!complete) send({op: 'resync-request'});
+        if (!complete) askResync();
     }
     clearPeerPreview(fromId);
 };
@@ -552,7 +569,7 @@ const replayRemoteOpsSince = function (since) {
         return;
     }
     captureBaseline();
-    send({op: 'resync-request'});
+    askResync();
 };
 const subscribePeers = function (listener) { _peerListeners.add(listener); return () => _peerListeners.delete(listener); };
 const subscribeRemoteApplied = function (listener) {
