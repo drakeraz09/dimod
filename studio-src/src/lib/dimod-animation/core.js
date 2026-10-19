@@ -353,9 +353,11 @@ function normalizeGroup(g, taken) {
   if (g.maskSource && !(g.tracks && g.tracks.maskSource)) {
     out.tracks.maskSource = { keyframes: [{ sec: 0, value: g.maskSource, ease: "Step", id: makeKFID() }] };
   }
-  if (g.tracks && typeof g.tracks === "object") {
-    for (const [key, tr] of Object.entries(g.tracks)) {
-      if (!TD[key] || !tr) continue;
+  const all = Object.assign({}, g.extraTracks && typeof g.extraTracks === "object" ? g.extraTracks : {}, g.tracks && typeof g.tracks === "object" ? g.tracks : {});
+  if (Object.keys(all).length) {
+    for (const [key, tr] of Object.entries(all)) {
+      if (!tr) continue;
+      if (!TD[key]) { (out.extraTracks ||= {})[key] = tr; continue; }
       const keyframes = normalizeKeyframes(tr.keyframes, key);
       if (!keyframes.length && !tr.muted) continue;
       out.tracks[key] = { keyframes };

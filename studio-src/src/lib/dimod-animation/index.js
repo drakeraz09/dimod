@@ -1,6 +1,7 @@
 // dimod-animation is a port of KS4, my other project, moved into the studio
 import {animationsOf} from './runtime';
-import {normalizeAnim, serializeAnim, makeAnimId, uniqueName} from './core';
+import {ALL_TRACKS, normalizeAnim, serializeAnim, makeAnimId, uniqueName} from './core';
+const TV = ALL_TRACKS.length;
 import {colorForUserId} from '../dimod-collab';
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const clone = v => (v === null || typeof v !== 'object' ? v : JSON.parse(JSON.stringify(v)));
@@ -175,7 +176,7 @@ class AnimationCollab {
     collab () { return (typeof window !== 'undefined' && window.dimodCollab) || null; }
     send (type, data) {
         const c = this.collab();
-        if (c) c.send(type, Object.assign({}, data, {author: this.session}));
+        if (c) c.send(type, Object.assign({}, data, {author: this.session, tv: TV}));
     }
     attach () {
         const c = this.collab();
@@ -390,7 +391,13 @@ class AnimationCollab {
         const target = this.targetFor(msg);
         if (!target || !Array.isArray(msg.order)) return;
         if (msg.reason === 'join' && this.edited.has(target.id)) return;
-        const whole = msg.reason === 'join' || msg.reason === 'repair';
+        const old = (Number(msg.tv) || 0) < TV;
+        if (old && !this.warnedOld) {
+            this.warnedOld = true;
+            window.dispatchEvent(new CustomEvent('dimod:collab-desync', {detail: {reason: 'old-version',
+                text: 'Someone here is on an older version of the studio... ask them to reload so new animation properties stay put.'}}));
+        }
+        const whole = !old && (msg.reason === 'join' || msg.reason === 'repair');
         const incoming = msg.docs && typeof msg.docs === 'object' ? msg.docs : {};
         const mine = new Map(animationsOf(target.sprite).map(d => [d.id, d]));
         const next = [];
@@ -411,7 +418,7 @@ class AnimationCollab {
     }
     onHash (msg) {
         const target = this.targetFor(msg);
-        if (!target || this.hashTimers.has(target.id) || this.pending.size) return;
+        if (!target || this.hashTimers.has(target.id) || this.pending.size || (Number(msg.tv) || 0) < TV) return;
         if (msg.hash === hash(stable(this.liveDocs(target)))) return;
         if (this.session > String(msg.author)) this.sendList(target, 'repair');
     }
