@@ -31,6 +31,7 @@ let _remoteSeq = 0;
 let _gesture = null;
 let _liveSource = null;
 let _touched = new Map();
+let _taken = new Map();
 const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
 let _previewTimer = null;
 const _peers = new Map();
@@ -237,6 +238,10 @@ const noteTouched = function (ops) {
     for (const o of ops) {
         const did = o.did || (o.op === 'doc' ? '#doc' : null);
         if (!did || _touched.has(did)) continue;
+        if (_taken.has(did)) {
+            const now = did === '#doc' ? o.doc : o.op === 'remove' ? null : JSON.stringify(o.json);
+            if (now === _taken.get(did)) continue;
+        }
         if (did === '#doc') { _touched.set(did, {json: _baselineDoc}); continue; }
         _touched.set(did, {json: _baseline.has(did) ? _baseline.get(did) : null, index: _baselineOrder.indexOf(did)});
     }
@@ -254,6 +259,7 @@ const takeTouched = function () {
         after[did] = item ? {json: JSON.stringify(serializeItem(item)), index: content.indexOf(item)} : {json: null};
     }
     _touched = new Map();
+    _taken = new Map(Object.keys(after).map(did => [did, after[did].json]));
     return {before, after};
 };
 const restoreMine = function (entry, fromEntry) {
@@ -284,6 +290,7 @@ const commitLocalChanges = function (isVector) {
     if (_baseline === null) { send(Object.assign(buildReset(), {brushes: usedBrushes()})); captureBaseline(); return; }
     const ops = diffAgainstBaseline();
     noteTouched(ops);
+    _taken = new Map();
     captureBaseline();
     if (ops.length) { send({op: 'ops', ops, brushes: usedBrushes()}); renewGesture(); }
 };
