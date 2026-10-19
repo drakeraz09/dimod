@@ -36,6 +36,7 @@ let _clock = 0;
 let _stamps = new Map();
 let _held = [];
 let _askedAt = 0;
+let _remoteHit = new Map();
 const askResync = function () { _askedAt = Date.now(); send({op: 'resync-request'}); };
 const laterStamp = (a, b) => !b || a.v > b.v || (a.v === b.v && a.w > b.w);
 const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
@@ -136,6 +137,7 @@ const resetCollab = function () {
     _touched = new Map();
     _stamps = new Map();
     _held = [];
+    _remoteHit = new Map();
     _lastSelectionKey = null;
     _bitmapBase = null;
     _patchState = {pid: null, clean: true};
@@ -269,20 +271,19 @@ const takeTouched = function () {
     }
     _touched = new Map();
     _taken = new Map(Object.keys(after).map(did => [did, after[did].json]));
-    return {before, after};
+    return {before, after, seq: _remoteSeq};
 };
 const restoreMine = function (entry, fromEntry) {
     const layer = getPaintingLayer();
     if (!isCollabActive() || !layer || !entry.collab || !fromEntry || !fromEntry.collab) return false;
     const forward = entry.time > fromEntry.time;
     const states = forward ? entry.collab.after : fromEntry.collab.before;
-    const left = forward ? entry.collab.before : fromEntry.collab.after;
+    const since = (forward ? entry : fromEntry).collab.seq || 0;
     for (const did of Object.keys(states)) {
         const w = states[did];
         if (did === '#doc') { if (w.json) applyDoc(w.json); continue; }
         const live = liveByDid(did);
-        const now = live ? JSON.stringify(serializeItem(live)) : null;
-        if (left[did] && now !== left[did].json) continue;
+        if ((_remoteHit.get(did) || 0) > since) continue;
         if (!w.json) { if (live) live.remove(); continue; }
         const item = importItem(JSON.parse(w.json));
         if (!item) continue;
@@ -387,6 +388,8 @@ const applyOp = function (op, imported = []) {
 };
 const logRemote = function (op) {
     _remoteLog.push({seq: ++_remoteSeq, op});
+    if (op.did) _remoteHit.set(op.did, _remoteSeq);
+    if (op.op === 'reset') for (const e of op.items || []) if (e && e.did) _remoteHit.set(e.did, _remoteSeq);
     if (_remoteLog.length > REMOTE_LOG_MAX) _remoteLog.splice(0, _remoteLog.length - REMOTE_LOG_MAX);
 };
 const settleApplied = function () {
