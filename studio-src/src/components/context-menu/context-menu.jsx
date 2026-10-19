@@ -1,15 +1,19 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import {ContextMenu, MenuItem} from 'react-contextmenu';
 import classNames from 'classnames';
 
 import styles from './context-menu.css';
 
-const StyledContextMenu = props => (
-    <ContextMenu
-        {...props}
-        className={styles.contextMenu}
-    />
-);
+const StyledContextMenu = props => {
+    const menu = (
+        <ContextMenu
+            {...props}
+            className={styles.contextMenu}
+        />
+    );
+    return typeof document === 'undefined' ? menu : ReactDOM.createPortal(menu, document.body);
+};
 
 const StyledMenuItem = props => (
     <MenuItem

@@ -264,7 +264,7 @@ const takeTouched = function () {
     for (const [did, was] of _touched) {
         before[did] = was;
         if (did === '#doc') { after[did] = {json: serializeDoc(getDoc())}; continue; }
-        const item = getItemByDid(did);
+        const item = liveByDid(did);
         after[did] = item ? {json: JSON.stringify(serializeItem(item)), index: content.indexOf(item)} : {json: null};
     }
     _touched = new Map();
@@ -280,7 +280,7 @@ const restoreMine = function (entry, fromEntry) {
     for (const did of Object.keys(states)) {
         const w = states[did];
         if (did === '#doc') { if (w.json) applyDoc(w.json); continue; }
-        const live = getItemByDid(did);
+        const live = liveByDid(did);
         const now = live ? JSON.stringify(serializeItem(live)) : null;
         if (left[did] && now !== left[did].json) continue;
         if (!w.json) { if (live) live.remove(); continue; }
@@ -324,15 +324,24 @@ const liveCommit = function (isVector) {
 const importItem = function (json) {
     const item = paper.Base.importJSON(json);
     if (!(item instanceof paper.Item)) return null;
+    item.remove();
     applyItemData(item);
     return item;
+};
+const liveByDid = function (did) {
+    const layer = getPaintingLayer();
+    const hit = getItemByDid(did);
+    if (hit && layer && hit.parent === layer && getDid(hit) === did) return hit;
+    const all = contentItems().filter(item => getDid(item) === did);
+    for (const extra of all.slice(1)) extra.remove();
+    return all[0] || null;
 };
 const applyDoc = function (doc) { const parsed = deserializeDoc(doc); setDoc(parsed || createDoc()); _docDirty = true; };
 const applyOp = function (op, imported = []) {
     const layer = getPaintingLayer();
     if (!layer) return true;
     if (op.op === 'add') {
-        if (getItemByDid(op.did)) return applyOp({op: 'modify', did: op.did, json: op.json}, imported);
+        if (liveByDid(op.did)) return applyOp({op: 'modify', did: op.did, json: op.json}, imported);
         const item = importItem(op.json);
         if (!item) return true;
         imported.push(item);
@@ -342,7 +351,7 @@ const applyOp = function (op, imported = []) {
         return true;
     }
     if (op.op === 'modify') {
-        const existing = getItemByDid(op.did);
+        const existing = liveByDid(op.did);
         if (!existing) return applyOp({op: 'add', did: op.did, index: 1e9, json: op.json}, imported);
         const item = importItem(op.json);
         if (!item) return true;
@@ -351,13 +360,13 @@ const applyOp = function (op, imported = []) {
         return true;
     }
     if (op.op === 'remove') {
-        const existing = getItemByDid(op.did);
+        const existing = liveByDid(op.did);
         if (!existing) return true;
         existing.remove();
         return true;
     }
     if (op.op === 'order') {
-        const wanted = op.dids.map(did => getItemByDid(did)).filter(Boolean);
+        const wanted = op.dids.map(did => liveByDid(did)).filter(Boolean);
         for (const item of wanted) layer.addChild(item);
         return wanted.length === op.dids.length;
     }
