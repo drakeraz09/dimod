@@ -3842,7 +3842,7 @@ class Timeline {
     const st = this.st;
     const items = [];
     const sections = [
-      ["Transform", ["x", "y", "rotation", "scaleX", "scaleY", "skewX", "skewY", "flipX", "flipY", "alpha", "pivotX", "pivotY"]],
+      ["Transform", ["x", "y", "rotation", "rotMode", "scaleX", "scaleY", "skewX", "skewY", "flipX", "flipY", "alpha", "pivotX", "pivotY"]],
       ["Look", ["costume", "visible", "zIndex", "tint", "fxColor", "fxBrightness", "fxGhost", "fxPixelate", "fxMosaic", "fxWhirl", "fxFisheye", "blendMode"]],
       ["Style", ["glowSize", "glowColor", "outlineWidth", "outlineColor", "shadowX", "shadowY", "shadowBlur", "shadowAlpha", "motionBlur"]],
     ];

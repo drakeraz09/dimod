@@ -1074,6 +1074,7 @@ class Inspector extends React.Component {
                         {this.propScrub(g, 'rotation', {short: 'Turn'})}
                         {this.propScrub(g, 'alpha', {short: 'Alpha'})}
                     </div>
+                    {this.propSelect(g, 'rotMode', 'Rotation Mode', ['Number', 'Nearest'])}
                     <Row$1>
                         <ToolButton
                             icon="mirror"

@@ -3,6 +3,7 @@ const TD = {
   x: { label: "X", unit: "px", def: 0, kind: "num", color: "#e05555" },
   y: { label: "Y", unit: "px", def: 0, kind: "num", color: "#44cc77" },
   rotation: { label: "Rotation", unit: "°", def: 0, kind: "num", color: "#4488ff" },
+  rotMode: { label: "Rotation Mode", unit: "", def: "Number", kind: "disc", str: true, color: "#66a0ff" },
   scaleX: { label: "Scale X", unit: "%", def: 100, kind: "num", color: "#ffaa22" },
   scaleY: { label: "Scale Y", unit: "%", def: 100, kind: "num", color: "#dd55cc" },
   alpha: { label: "Alpha", unit: "%", def: 100, kind: "num", color: "#22ccdd", min: 0, max: 100 },
@@ -1045,6 +1046,17 @@ class Sampler {
     if (this.kind === "color") return lerpColor(a, b, k);
     return a + (b - a) * k;
   }
+  sampleAngle(t, rolled = null) {
+    const i = this.find(t);
+    if (i < 0) return this.valAt(0, rolled);
+    if (i >= this.n - 1) return this.valAt(i, rolled);
+    const ease = this.eases[i + 1];
+    const a = this.valAt(i, rolled);
+    if (ease === STEP) return a;
+    const d = ((((this.valAt(i + 1, rolled) - a) % 360) + 540) % 360) - 180;
+    const span = this.secs[i + 1] - this.secs[i];
+    return a + d * (span > 0 ? ease((t - this.secs[i]) / span) : 1);
+  }
   sampleAny(t) { const i = this.find(t); return this.vals[i < 0 ? 0 : i]; }
 }
 function lerpColor(a, b, k) {
@@ -1172,7 +1184,9 @@ class CompiledAnim {
         const sm = g.samplers[s];
         let v = DEFAULTS[s];
         if (sm) {
-          if (sm.rand) { sm.roll(t, out); v = sm.sampleNum(t, out.rollAt); } else v = sm.sampleNum(t);
+          const ang = s === S_ROT && g.str.rotMode && g.str.rotMode.sampleAny(t) === "Nearest";
+          if (sm.rand) sm.roll(t, out);
+          v = ang ? sm.sampleAngle(t, sm.rand ? out.rollAt : null) : sm.sampleNum(t, sm.rand ? out.rollAt : null);
           if (sm.kfExprs && evaluateOverridesEnabled) {
             const fx = sm.kfExprs[sm.activeIndex(t)];
             if (fx) {
