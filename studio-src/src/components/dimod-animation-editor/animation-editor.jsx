@@ -419,7 +419,7 @@ class Section extends React.Component {
     }
 }
 Section.propTypes = {badge: PropTypes.string, children: PropTypes.node, title: PropTypes.string.isRequired};
-const EFFECT_TRACKS = ['fxColor', 'fxBrightness', 'fxGhost', 'fxPixelate', 'fxMosaic', 'fxWhirl', 'fxFisheye',
+const EFFECT_TRACKS = ['fxColor', 'fxBrightness', 'fxGhost', 'fxPixelate', 'fxMosaic', 'fxMosaicX', 'fxMosaicY', 'fxWhirl', 'fxFisheye',
     'tint', 'blendMode', 'fxCustom', 'fxChromaticX', 'fxChromaticY'];
 const ADVANCED_TRACKS = ['skewX', 'skewY', 'pivotX', 'pivotY', 'padding', 'afterimageIntensity', 'afterimageFade',
     'afterimageInterval', 'clipTop', 'clipBottom', 'clipLeft', 'clipRight'];
@@ -1121,6 +1121,8 @@ class Inspector extends React.Component {
                         {this.propScrub(g, 'fxGhost', {short: 'Ghost'})}
                         {this.propScrub(g, 'fxPixelate', {short: 'Pixel'})}
                         {this.propScrub(g, 'fxMosaic', {short: 'Mosaic'})}
+                        {this.propScrub(g, 'fxMosaicX', {short: 'Mos X'})}
+                        {this.propScrub(g, 'fxMosaicY', {short: 'Mos Y'})}
                         {this.propScrub(g, 'fxWhirl', {short: 'Whirl'})}
                         {this.propScrub(g, 'fxFisheye', {short: 'Fisheye'})}
                         {this.propScrub(g, 'fxChromaticX', {short: 'RGB X'})}

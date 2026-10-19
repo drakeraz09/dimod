@@ -25,6 +25,8 @@ const TD = {
   fxGhost: { label: "Ghost", unit: "%", def: 0, kind: "num", color: "#aaddff", fx: true, min: 0, max: 100 },
   fxPixelate: { label: "Pixelate", unit: "", def: 0, kind: "num", color: "#cc88ff", fx: true, min: 0 },
   fxMosaic: { label: "Mosaic", unit: "", def: 0, kind: "num", color: "#88ffcc", fx: true },
+  fxMosaicX: { label: "Mosaic X", unit: "%", def: 0, kind: "num", color: "#66eebb", fx: true },
+  fxMosaicY: { label: "Mosaic Y", unit: "%", def: 0, kind: "num", color: "#44ddaa", fx: true },
   fxWhirl: { label: "Whirl", unit: "°", def: 0, kind: "num", color: "#ff9944", fx: true },
   fxFisheye: { label: "Fisheye", unit: "", def: 0, kind: "num", color: "#44ffcc", fx: true },
   fxCustom: { label: "CSS Filter", unit: "", def: "", kind: "disc", str: true, color: "#ff88dd", fx: true },
@@ -57,11 +59,11 @@ const TD = {
 const ALL_TRACKS = Object.keys(TD);
 const TRANSFORM_TRACKS = ["x", "y", "rotation", "scaleX", "scaleY", "skewX", "skewY", "flipX", "flipY", "alpha", "pivotX", "pivotY"];
 const PARENT_TRACKS = ["relativeTo", "followPos", "followRot", "followScale"];
-const FX_TRACKS = ["fxColor", "fxBrightness", "fxGhost", "fxPixelate", "fxMosaic", "fxWhirl", "fxFisheye", "tint", "fxChromaticX", "fxChromaticY", "blendMode", "fxCustom"];
+const FX_TRACKS = ["fxColor", "fxBrightness", "fxGhost", "fxPixelate", "fxMosaic", "fxMosaicX", "fxMosaicY", "fxWhirl", "fxFisheye", "tint", "fxChromaticX", "fxChromaticY", "blendMode", "fxCustom"];
 const STYLE_TRACKS = ["glowSize", "glowStrength", "glowColor", "outlineWidth", "outlineColor", "shadowX", "shadowY", "shadowBlur", "shadowAlpha", "shadowColor", "motionBlur"];
 const NICHE_TRACKS = ["padding", "afterimageIntensity", "afterimageFade", "afterimageInterval", "clipTop", "clipBottom", "clipLeft", "clipRight"];
 const MASK_TRACKS = ["maskSource", "maskInvert"];
-const EXPR_TRACKS = ["costume", ...TRANSFORM_TRACKS, "fxColor", "fxBrightness", "fxGhost", "fxPixelate", "fxMosaic", "fxWhirl", "fxFisheye", "fxChromaticX", "fxChromaticY", "glowSize", "outlineWidth"];
+const EXPR_TRACKS = ["costume", ...TRANSFORM_TRACKS, "fxColor", "fxBrightness", "fxGhost", "fxPixelate", "fxMosaic", "fxMosaicX", "fxMosaicY", "fxWhirl", "fxFisheye", "fxChromaticX", "fxChromaticY", "glowSize", "outlineWidth"];
 const BLEND_MODES = [
   "source-over",
   "multiply",

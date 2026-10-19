@@ -614,7 +614,7 @@ const PART_PROPS = [
     ['x', 'x'], ['y', 'y'], ['rotation', 'rotation'], ['scale x', 'scaleX'], ['scale y', 'scaleY'],
     ['alpha', 'alpha'], ['skew x', 'skewX'], ['skew y', 'skewY'], ['flip x', 'flipX'], ['flip y', 'flipY'], ['color effect', 'fxColor'],
     ['brightness effect', 'fxBrightness'], ['ghost effect', 'fxGhost'], ['pixelate effect', 'fxPixelate'],
-    ['mosaic effect', 'fxMosaic'], ['whirl effect', 'fxWhirl'], ['fisheye effect', 'fxFisheye'],
+    ['mosaic effect', 'fxMosaic'], ['mosaic x', 'fxMosaicX'], ['mosaic y', 'fxMosaicY'], ['whirl effect', 'fxWhirl'], ['fisheye effect', 'fxFisheye'],
     ['glow size', 'glowSize'], ['outline width', 'outlineWidth'], ['tint', 'tint'], ['visible', 'visible'],
     ['z-order', 'zIndex'], ['costume', 'costume']
 ];

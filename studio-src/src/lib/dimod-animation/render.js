@@ -25,6 +25,7 @@ uniform float u_pixelate;   // block size in box pixels
 #endif
 #ifdef FX_MOSAIC
 uniform float u_mosaic;     // tile count
+uniform vec2 u_mosaicOff;
 #endif
 #ifdef FX_WHIRL
 uniform float u_whirl;      // radians
@@ -78,7 +79,7 @@ vec4 shaped(vec2 q) {
   }
 #endif
 #ifdef FX_MOSAIC
-  q = fract(q * u_mosaic);
+  q = fract(q * u_mosaic + u_mosaicOff);
 #endif
 #ifdef FX_PIXELATE
   {
@@ -693,7 +694,7 @@ class GpuPipeline {
     this.bindTex(0, d.tex, linear);
     const u = {u_tex: d.tex, u_geo: d.geo, u_padUV: d.padUV, u_boxPx: d.boxPx, u_alpha: alpha};
     if (d.bits & 1) u.u_pixelate = d.pixelate;
-    if (d.bits & 2) u.u_mosaic = d.mosaic;
+    if (d.bits & 2) { u.u_mosaic = d.mosaic; u.u_mosaicOff = d.mosaicOff; }
     if (d.bits & 4) u.u_whirl = d.whirl;
     if (d.bits & 8) u.u_fisheye = d.fisheye;
     if (d.bits & 16) u.u_chroma = d.chroma;
@@ -777,10 +778,10 @@ function buildDrawCmd(ctx, compiled, pose, gi, binding, out) {
   const pix = Math.max(0, num[base + S.fxPixelate]);
   if (pix > 0) { bits |= 1; out.pixelate = Math.max(1, Math.round(((pix / 10) * Math.max(boxW, boxH)) / 10)); }
   const mos = num[base + S.fxMosaic];
-  if (mos) {
-    const tiles = Math.max(1, Math.min(512, Math.round(Math.abs(mos) / 10 + 1)));
-    if (tiles > 1) { bits |= 2; out.mosaic = tiles; }
-  }
+  const mox = num[base + S.fxMosaicX] / 100, moy = num[base + S.fxMosaicY] / 100;
+  const tiles = mos ? Math.max(1, Math.min(512, Math.round(Math.abs(mos) / 10 + 1))) : 1;
+  out.mosaicOff[0] = mox; out.mosaicOff[1] = moy;
+  if (tiles > 1 || mox || moy) { bits |= 2; out.mosaic = tiles; }
   const wh = num[base + S.fxWhirl];
   if (wh) { bits |= 4; out.whirl = (wh * Math.PI) / 180; }
   const fe = num[base + S.fxFisheye];
@@ -836,6 +837,7 @@ function newDrawCmd() {
     chroma: new Float32Array(2),
     pixelate: 0,
     mosaic: 1,
+    mosaicOff: new Float32Array(2),
     whirl: 0,
     fisheye: 1,
     alpha: 1,
@@ -897,6 +899,7 @@ function effectInfo(renderer) {
 function nativeEligible(renderer, d, pose, gi) {
   if (d.slices || d.pad) return false;
   if (d.bits & (16 | 32)) return false;
+  if (d.mosaicOff && (d.mosaicOff[0] || d.mosaicOff[1])) return false;
   if (d.filter && d.filter.matrix) return false;
   if (d.bits & 64 && !effectInfo(renderer).tintColor) return false;
   return true;
