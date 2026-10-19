@@ -46,7 +46,9 @@ const _restoreInFull = function (entry) {
 const _restore = function (entry, fromEntry, setSelectedItems, onUpdateImage, isBitmapMode, step) {
     const live = !isBitmapMode && isVector(entry.paintEditorFormat) && fromEntry &&
         isVector(fromEntry.paintEditorFormat) && isCollabActive();
-    if (live) {
+    const ok = live && (step ? (forward => (forward ? entry : fromEntry).collab)(entry.time > fromEntry.time) :
+        (fromEntry.path || []).every(([a, b]) => (a.time > b.time ? a : b).collab));
+    if (ok) {
         if (step) restoreMine(entry, fromEntry);
         else for (const [a, b] of fromEntry.path || []) restoreMine(a, b);
         setSelectedItems();

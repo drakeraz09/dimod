@@ -48,6 +48,7 @@ $border-radius: .5rem;
 
 .button-group-button {
     display: inline-block;
+    transition: none;
     border: 1px solid $ui-pane-border;
     border-radius: 0;
     padding: .35rem;
@@ -151,3 +152,7 @@ $border-radius: .5rem;
     margin-left: calc(2 * $grid-unit);
 }
 
+
+.button-group-button:active, .button-group-button.mod-disabled:active {
+    background-color: rgba(128, 128, 128, .15);
+}

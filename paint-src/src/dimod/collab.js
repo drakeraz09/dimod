@@ -275,10 +275,12 @@ const takeTouched = function () {
 };
 const restoreMine = function (entry, fromEntry) {
     const layer = getPaintingLayer();
-    if (!isCollabActive() || !layer || !entry.collab || !fromEntry || !fromEntry.collab) return false;
+    if (!isCollabActive() || !layer || !entry || !fromEntry) return false;
     const forward = entry.time > fromEntry.time;
-    const states = forward ? entry.collab.after : fromEntry.collab.before;
-    const since = (forward ? entry : fromEntry).collab.seq || 0;
+    const step = forward ? entry : fromEntry;
+    if (!step.collab) return false;
+    const states = forward ? step.collab.after : step.collab.before;
+    const since = step.collab.seq || 0;
     for (const did of Object.keys(states)) {
         const w = states[did];
         if (did === '#doc') { if (w.json) applyDoc(w.json); continue; }
