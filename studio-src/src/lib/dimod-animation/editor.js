@@ -1496,7 +1496,7 @@ function pasteKeys(doc, clip, at, targetGroup) {
       dt.keyframes.push(kf);
       dt.keyframes.sort((a, b) => a.sec - b.sec);
     } else {
-      const g = retarget || doc.groups.find((x) => x.name === it.group);
+      const g = retarget || doc.groups.find((x) => x.name === it.group) || targetGroup;
       if (!g || !TD[it.key]) continue;
       const tr = ensureTrack(g, it.key);
       tr.keyframes = tr.keyframes.filter((k) => !sameSec(k.sec, kf.sec));
@@ -5973,7 +5973,10 @@ class ParticlePreview {
     dispose () { cancelAnimationFrame(this.raf); this.raf = 0; this.system.clear(); }
 }
 const COMMIT_MS = 250;
+let sharedClip = null;
 class Editor {
+  get clipboard() { return sharedClip; }
+  set clipboard(v) { sharedClip = v; }
   constructor(ext, doc, opts) {
     injectCSS();
     this.ext = ext;
@@ -5981,7 +5984,6 @@ class Editor {
     this.prefs = prefs;
     this.timeFormat = "seconds";
     const st = (this.st = new EditorState(ext, doc, opts.target, opts.sprite));
-    this.clipboard = null;
     this.root = opts.root;
     this.viewport = new Viewport(this);
     this.timeline = new Timeline(this);
