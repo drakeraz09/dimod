@@ -2,6 +2,38 @@ import bindAll from 'lodash.bindall';
 import PropTypes from 'prop-types';
 import React from 'react';
 import WavEncoder from 'wav-encoder';
+
+const encodeSound = async (channels, sampleRate, format) => {
+    if ((format === 'ogg' || format === 'mp3') && channels.length <= 2) {
+        try {
+            const lib = await import(/* webpackChunkName: "audio-encoders" */ 'wasm-media-encoders/dist/index.cjs');
+            const enc = await (format === 'ogg' ? lib.createOggEncoder() : lib.createMp3Encoder());
+            enc.configure({ sampleRate, channels: channels.length, vbrQuality: format === 'ogg' ? 5 : 2 });
+            const parts = [];
+            const step = 1 << 16;
+            for (let i = 0; i < channels[0].length; i += step) parts.push(enc.encode(channels.map(c => c.subarray(i, i + step))).slice());
+            parts.push(enc.finalize().slice());
+            const bytes = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+            parts.reduce((at, p) => { bytes.set(p, at); return at + p.length; }, 0);
+            return { bytes, format };
+        } catch (e) {
+            log.warn(`Could not encode ${format}, saving as wav instead`, e);
+        }
+    }
+    const wav = await WavEncoder.encode({ sampleRate, channelData: channels });
+    return { bytes: new Uint8Array(wav), format: 'wav' };
+};
+const setSoundFormat = (vm, soundIndex, bytes, format) => {
+    const target = vm.editingTarget;
+    const sound = target && target.sprite.sounds[soundIndex];
+    if (!sound || format === 'wav') return;
+    const storage = vm.runtime.storage;
+    sound.asset = storage.createAsset(storage.AssetType.Sound, format, bytes, null, true);
+    sound.assetId = sound.asset.assetId;
+    sound.dataFormat = format;
+    sound.md5 = `${sound.assetId}.${format}`;
+    vm.emitTargetsUpdate();
+};
 import VM from 'scratch-vm';
 
 import { connect } from 'react-redux';
@@ -162,13 +194,12 @@ class SoundEditor extends React.Component {
             playhead: null
         });
     }
-    submitNewSamples(channels, sampleRate, skipUndo) {
+    submitNewSamples(channels, sampleRate, skipUndo, format) {
+        const fmt = format || this.nextFormat || this.props.dataFormat;
+        this.nextFormat = null;
         return downsampleIfNeeded({ channels, sampleRate }, this.resampleBufferToRate)
             .then(({ channels: newChannels, sampleRate: newSampleRate }) =>
-                WavEncoder.encode({
-                    sampleRate: newSampleRate,
-                    channelData: newChannels
-                }).then(wavBuffer => {
+                encodeSound(newChannels, newSampleRate, fmt).then(({ bytes, format: outFormat }) => {
                     if (!skipUndo) {
                         this.redoStack = [];
                         if (this.undoStack.length >= UNDO_STACK_SIZE) {
@@ -177,11 +208,12 @@ class SoundEditor extends React.Component {
                         this.undoStack.push(this.getUndoItem());
                     }
                     this.resetState(newChannels, newSampleRate);
-                    const wavBytes = new Uint8Array(wavBuffer);
                     this.props.vm.updateSoundBuffer(
                         this.props.soundIndex,
                         this.audioBufferPlayer.buffer,
-                        wavBytes);
+                        bytes,
+                        outFormat);
+                    setSoundFormat(this.props.vm, this.props.soundIndex, bytes, outFormat);
                     return true; // Edit was successful
                 })
             )
@@ -631,11 +663,18 @@ class SoundEditor extends React.Component {
         ];
         let selectedSampleRate = this.props.sampleRate;
         let selectedForceRate = false;
+        let toOgg = false;
         let menu = await window.ScratchBlocks.customPrompt(
             { title: "Format Sound" }, { content: { width: "350px", height: "auto" } },
             [
                 {
                     name: "Apply", role: "ok", callback: () => {
+                        if (toOgg && Number(selectedSampleRate) === this.props.sampleRate) {
+                            const { channels, sampleRate } = this.copyCurrentBuffer();
+                            this.submitNewSamples(channels, sampleRate, false, 'ogg');
+                            return;
+                        }
+                        if (toOgg) this.nextFormat = 'ogg';
                         const edits = { sampleRate: selectedSampleRate };
                         if (selectedForceRate) edits.sampleRateEnforced = selectedSampleRate;
                         this.handleEffect(edits);
@@ -689,7 +728,19 @@ class SoundEditor extends React.Component {
                 selectedForceRate = div.id == "1";
                 e.stopPropagation();
             });
-            menu.append(rateTitle, warningDiv, genTitle("Apply to:"), applicatorDiv, warningDiv2);
+            const oggDiv = document.createElement("label");
+            oggDiv.style = "display: flex;align-items: center;margin-top: 15px;font-weight: 500;font-size: 14px;cursor: pointer;";
+            const oggCheck = document.createElement("input");
+            oggCheck.type = "checkbox";
+            oggCheck.style = "margin-right: 8px;";
+            oggCheck.checked = this.props.dataFormat === 'ogg';
+            oggCheck.disabled = this.props.dataFormat === 'ogg';
+            toOgg = false;
+            oggCheck.onchange = () => { toOgg = oggCheck.checked; };
+            oggDiv.append(oggCheck, document.createTextNode("To Ogg"));
+            const oggNote = warning.cloneNode(true);
+            oggNote.textContent = this.props.dataFormat === 'ogg' ? "This sound is already an ogg" : "Much smaller file, sounds the same";
+            menu.append(rateTitle, warningDiv, genTitle("Apply to:"), applicatorDiv, warningDiv2, oggDiv, oggNote);
         };
 
         // account for weird react timing issue

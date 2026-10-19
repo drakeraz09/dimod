@@ -467,9 +467,9 @@ const SoundAssetEditorRaw = ({asset, host, vm, chunkSize}) => {
     const adapter = React.useMemo(() => {
         const a = Object.create(vm);
         Object.defineProperty(a, 'editingTarget', {value: null});
-        a.updateSoundBuffer = (index, audioBuffer, wavBytes) => {
+        a.updateSoundBuffer = (index, audioBuffer, wavBytes, fmt) => {
             if (!host.list.includes(asset)) return;
-            setFormat(asset, 'wav', 'sound');
+            setFormat(asset, fmt || 'wav', 'sound');
             own.current = wavBytes;
             host.replace(asset, wavBytes);
         };

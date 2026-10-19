@@ -396,7 +396,7 @@ const applyCostumeUpdate = (vm, payload) => {
         go();
     });
 };
-const broadcastSoundUpdate = (vm, soundIndex, wavBytes) => {
+const broadcastSoundUpdate = (vm, soundIndex, wavBytes, fmt) => {
     if (!window.dimodCollab) return;
     const target = vm.editingTarget;
     if (!target) return;
@@ -407,7 +407,8 @@ const broadcastSoundUpdate = (vm, soundIndex, wavBytes) => {
         soundIndex,
         soundName: sound ? sound.name : null,
         ver: bumpAssetVer(assetVerKey('s', target.id, sound ? sound.name : soundIndex)),
-        wav: uint8ToBase64(wavBytes)
+        wav: uint8ToBase64(wavBytes),
+        fmt: fmt === 'ogg' || fmt === 'mp3' ? fmt : 'wav'
     });
 };
 const applySoundUpdate = (vm, payload) => {
@@ -429,9 +430,10 @@ const applySoundUpdate = (vm, payload) => {
         if (soundId && vm.runtime.audioEngine) { target.sprite.soundBank.getSoundPlayer(soundId).buffer = audioBuffer; }
         sound.format = '';
         const storage = vm.runtime.storage;
-        sound.asset = storage.createAsset(storage.AssetType.Sound, storage.DataFormat.WAV, wavBytes, null, true);
+        const fmt = payload.fmt === 'ogg' || payload.fmt === 'mp3' ? payload.fmt : storage.DataFormat.WAV;
+        sound.asset = storage.createAsset(storage.AssetType.Sound, fmt, wavBytes, null, true);
         sound.assetId = sound.asset.assetId;
-        sound.dataFormat = storage.DataFormat.WAV;
+        sound.dataFormat = fmt;
         sound.md5 = `${sound.assetId}.${sound.dataFormat}`;
         sound.sampleCount = audioBuffer.length;
         sound.rate = audioBuffer.sampleRate;
@@ -1943,9 +1945,9 @@ const installCollabHooks = vm => {
         };
     }
     const updateSoundBuffer = late('updateSoundBuffer');
-    vm.updateSoundBuffer = (i, buf, enc) => {
-        const r = updateSoundBuffer(i, buf, enc);
-        if (enc && !isQuiet(vm)) broadcastSoundUpdate(vm, i, enc);
+    vm.updateSoundBuffer = (i, buf, enc, fmt) => {
+        const r = updateSoundBuffer(i, buf, enc, fmt);
+        if (enc && !isQuiet(vm)) broadcastSoundUpdate(vm, i, enc, fmt);
         return r;
     };
 };

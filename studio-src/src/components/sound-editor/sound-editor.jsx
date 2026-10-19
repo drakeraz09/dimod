@@ -443,7 +443,7 @@ const SoundEditor = props => (
                 />
             </div>
         )}
-        {(props.dataFormat === "mp3" || props.dataFormat === "ogg" || props.dataFormat === "flac") && (
+        {props.dataFormat === "flac" && (
             <div className={classNames(styles.alert, styles.stereo)}>
                 <FormattedMessage
                     defaultMessage="Editing this sound will irreversibly convert it to a much larger, WAV format sound."
