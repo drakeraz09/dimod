@@ -32,6 +32,10 @@ let _gesture = null;
 let _liveSource = null;
 let _touched = new Map();
 let _taken = new Map();
+let _clock = 0;
+let _stamps = new Map();
+let _held = [];
+const laterStamp = (a, b) => !b || a.v > b.v || (a.v === b.v && a.w > b.w);
 const setLivePreviewSource = function (fn) { _liveSource = fn || null; };
 let _previewTimer = null;
 const _peers = new Map();
@@ -128,6 +132,8 @@ const resetCollab = function () {
     _remoteLog = [];
     _remoteSeq = 0;
     _touched = new Map();
+    _stamps = new Map();
+    _held = [];
     _lastSelectionKey = null;
     _bitmapBase = null;
     _patchState = {pid: null, clean: true};
@@ -291,6 +297,12 @@ const commitLocalChanges = function (isVector) {
     const ops = diffAgainstBaseline();
     noteTouched(ops);
     _taken = new Map();
+    for (const o of ops) {
+        const key = o.did || (o.op === 'doc' ? '#doc' : null);
+        if (!key) continue;
+        o.st = {v: ++_clock, w: _patchTag};
+        _stamps.set(key, o.st);
+    }
     captureBaseline();
     if (ops.length) { send({op: 'ops', ops, brushes: usedBrushes()}); renewGesture(); }
 };
@@ -503,10 +515,31 @@ const receivePacket = function (packet, fromId) {
         return;
     }
     if (packet.op === 'ops') {
-        const complete = applyOps(packet.ops, {log: true});
-        clearPeerPreview(fromId);
+        for (const o of packet.ops) if (o && o.st && o.st.v > _clock) _clock = o.st.v;
+        if (_gesture && _gesture.isVector) { _held.push({packet, fromId}); return; }
+        applyRemoteOps(packet, fromId);
+    }
+};
+const applyRemoteOps = function (packet, fromId) {
+    const ops = packet.ops.filter(o => {
+        const key = o && (o.did || (o.op === 'doc' ? '#doc' : null));
+        if (!key || !o.st || typeof o.st.v !== 'number') return true;
+        if (!laterStamp(o.st, _stamps.get(key))) return false;
+        _stamps.set(key, o.st);
+        return true;
+    });
+    if (ops.length) {
+        const complete = applyOps(ops, {log: true});
         if (!complete) send({op: 'resync-request'});
     }
+    clearPeerPreview(fromId);
+};
+const flushHeld = function () {
+    if (_gesture || !_held.length) return;
+    if (isCollabActive() && _host && !(_host.isBitmap && _host.isBitmap())) commitLocalChanges(true);
+    const held = _held;
+    _held = [];
+    for (const {packet, fromId} of held) applyRemoteOps(packet, fromId);
 };
 const remoteSeq = () => _remoteSeq;
 const replayRemoteOpsSince = function (since) {
@@ -831,6 +864,7 @@ const endGesture = function () {
     const g = _gesture;
     stopGesture();
     if (g && g.sentAny && isCollabActive()) send({op: 'preview-end'});
+    if (_held.length) setTimeout(flushHeld, 0);
 };
 let _bitmapBase = null;
 let _patchSeq = 0;
