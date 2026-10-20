@@ -20,15 +20,27 @@ import Modes from '../lib/modes';
 import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
 import {incrementPasteOffset, setClipboardItems} from '../reducers/clipboard';
 
-const writeSystemClipboard = items => {
+const CLIP_KEY = 'dimod:paintClipboard';
+let clipStamp = 0;
+let lastImage = null;
+const readSharedClip = () => {
+    try { return JSON.parse(localStorage.getItem(CLIP_KEY) || 'null'); } catch (e) { return null; }
+};
+const writeSystemClipboard = (items, jsonItems) => {
+    clipStamp = Date.now();
+    try { localStorage.setItem(CLIP_KEY, JSON.stringify({t: clipStamp, items: jsonItems})); } catch (e) {}
     try {
-        if (!navigator.clipboard || !navigator.clipboard.writeText) return;
-        const markup = items.map(item => item.exportSVG({asString: true})).join('\n');
-        navigator.clipboard.writeText(markup).catch(() => {});
+        if (!navigator.clipboard) return;
+        const markup = `${items.map(item => item.exportSVG({asString: true})).join('\n')}\n<!-- dimod-clip:${clipStamp} -->`;
+        const raster = items.length === 1 && items[0] instanceof paper.Raster && items[0];
+        if (raster && window.ClipboardItem && navigator.clipboard.write) {
+            const png = new Promise(resolve => raster.canvas.toBlob(resolve, 'image/png'));
+            navigator.clipboard.write([new window.ClipboardItem({'text/plain': new Blob([markup], {type: 'text/plain'}), 'image/png': png})])
+                .catch(() => navigator.clipboard.writeText(markup).catch(() => {}));
+        } else if (navigator.clipboard.writeText) navigator.clipboard.writeText(markup).catch(() => {});
     } catch (e) {
     }
 };
-
 const CopyPasteHOC = function (WrappedComponent) {
     class CopyPasteWrapper extends React.Component {
         constructor (props) {
@@ -40,6 +52,13 @@ const CopyPasteHOC = function (WrappedComponent) {
                 'handleDocumentPaste'
             ]);
             this.queuedPaste = null;
+        }
+        componentDidMount () {
+            const shared = readSharedClip();
+            if (shared && shared.t !== clipStamp && shared.items && shared.items.length && !this.props.clipboardItems.length) {
+                clipStamp = shared.t;
+                this.props.setClipboardItems(shared.items);
+            }
         }
         componentWillUnmount () {
             clearTimeout(this.queuedPaste);
@@ -74,7 +93,7 @@ const CopyPasteHOC = function (WrappedComponent) {
                 clipboardItems.push(jsonItem);
             }
             this.props.setClipboardItems(clipboardItems);
-            writeSystemClipboard(selectedItems);
+            writeSystemClipboard(selectedItems, clipboardItems);
         }
         handleCut () {
             let selectedItems = [];
@@ -106,7 +125,7 @@ const CopyPasteHOC = function (WrappedComponent) {
                 clipboardItems.push(jsonItem);
             }
             this.props.setClipboardItems(clipboardItems);
-            writeSystemClipboard(selectedItems);
+            writeSystemClipboard(selectedItems, clipboardItems);
             // delete items
             if (deleteSelection(this.props.mode, this.props.onUpdateImage)) {
                 clearSelection(this.props.clearSelectedItems);
@@ -126,10 +145,23 @@ const CopyPasteHOC = function (WrappedComponent) {
                 this.props.textEditing) {
                 return;
             }
+            const text = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
+            const mark = /<!-- dimod-clip:(\d+) -->/.exec(text || '');
+            if (mark) {
+                const shared = readSharedClip();
+                if (shared && String(shared.t) === mark[1] && shared.t !== clipStamp && shared.items && shared.items.length) {
+                    clipStamp = shared.t;
+                    this.props.setClipboardItems(shared.items);
+                }
+                return;
+            }
             const items = event.clipboardData ? Array.from(event.clipboardData.items) : [];
             const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
             const file = imageItem && imageItem.getAsFile();
             if (!file) return;
+            const sig = `${file.type}:${file.size}`;
+            if (lastImage && lastImage.sig === sig && clipStamp > lastImage.t && this.props.clipboardItems.length) return;
+            lastImage = {sig, t: Date.now()};
 
             event.preventDefault();
             clearTimeout(this.queuedPaste);

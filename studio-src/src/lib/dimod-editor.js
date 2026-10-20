@@ -1059,6 +1059,55 @@ const installKeys = vm => {
     }, true);
 };
 let started = false;
+const CLIP_KEY = 'dimod:blockClipboard';
+const CORE_PREFIXES = new Set(['motion', 'looks', 'sound', 'event', 'control', 'sensing', 'operator', 'data', 'procedures', 'argument']);
+let clipStamp = 0;
+const clipExtensions = (vm, xml) => {
+    const mgr = vm.extensionManager, urls = mgr.getExtensionURLs ? mgr.getExtensionURLs() : {}, out = {};
+    for (const m of xml.matchAll(/type="([^"_]+)_/g)) {
+        const id = m[1];
+        if (CORE_PREFIXES.has(id) || id in out || !mgr.isExtensionLoaded(id)) continue;
+        out[id] = urls[id] || null;
+    }
+    return out;
+};
+const installCrossProjectClipboard = vm => {
+    const Blockly = getBlockly();
+    if (!Blockly || Blockly.dimodClip) return;
+    Blockly.dimodClip = true;
+    const copy = Blockly.copy_;
+    Blockly.copy_ = function (block) {
+        copy.call(this, block);
+        try {
+            const xml = Blockly.Xml.domToText(Blockly.clipboardXml_);
+            clipStamp = Date.now();
+            localStorage.setItem(CLIP_KEY, JSON.stringify({t: clipStamp, xml, exts: clipExtensions(vm, xml)}));
+        } catch (e) {}
+    };
+    const pasteNow = (workspace, dom) => {
+        Blockly.Events.setGroup(true);
+        try { workspace.paste(dom); } finally { Blockly.Events.setGroup(false); }
+    };
+    window.addEventListener('keydown', e => {
+        if (e.keyCode !== 86 || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+        const workspace = getWorkspace();
+        if (!workspace || workspace.options.readOnly || Blockly.utils.isTargetInput(e) || !workspace.isVisible() || workspace.isDragging()) return;
+        let clip;
+        try { clip = JSON.parse(localStorage.getItem(CLIP_KEY) || 'null'); } catch (err) { return; }
+        if (!clip || !clip.xml || clip.t === clipStamp) return;
+        let dom;
+        try { dom = Blockly.Xml.textToDom(clip.xml); } catch (err) { return; }
+        clipStamp = clip.t;
+        Blockly.clipboardXml_ = dom;
+        Blockly.clipboardSource_ = workspace;
+        const missing = Object.keys(clip.exts || {}).filter(id => !vm.extensionManager.isExtensionLoaded(id));
+        if (!missing.length) return;
+        e.stopPropagation();
+        e.preventDefault();
+        Promise.all(missing.map(id => loadExtensionURLWithTimeout(vm, clip.exts[id] || id).catch(err => log.warn('dimod: paste extension failed', id, err))))
+            .then(() => setTimeout(() => pasteNow(getWorkspace() || workspace, dom), 100));
+    }, true);
+};
 const installWorkspaceTools = vm => {
     if (started) return;
     started = true;
@@ -1080,6 +1129,7 @@ const installWorkspaceTools = vm => {
             patchBlockDragger(Blockly);
             patchGesture(Blockly, vm);
             installMarquee(workspace);
+            installCrossProjectClipboard(vm);
             installPeek(workspace, vm);
             vm.on('workspaceUpdate', () => setTimeout(() => refreshSelection(workspace), 250));
         } catch (err) { console.warn('dimod: workspace tools failed to start', err); }
