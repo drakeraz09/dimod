@@ -37,7 +37,8 @@ import {
     easeFnFor,
     applyEase,
     EASE_FAMS,
-    vectorBounds
+    vectorBounds,
+    EPS_SEC,
 } from './core.js';
 export {isDiscrete} from './core.js';
 import { apply, getAnimationCollab } from './index.js';
@@ -1406,8 +1407,45 @@ function isAncestor(doc, maybeAncestor, g) {
   }
   return false;
 }
-function setParent(doc, child, parent, pose, gi, pi) {
+const XFORM_KEYS = ["x", "y", "rotation", "scaleX", "scaleY"];
+function parentCompensation(pose, gi, pi) {
+  const wx = pose.world[gi * 5], wy = pose.world[gi * 5 + 1], wr = pose.world[gi * 5 + 2], wsx = pose.world[gi * 5 + 3], wsy = pose.world[gi * 5 + 4];
+  if (pi < 0) return { x: wx, y: wy, rotation: wr, scaleX: wsx, scaleY: wsy };
+  const px = pose.world[pi * 5], py = pose.world[pi * 5 + 1], pr = pose.world[pi * 5 + 2];
+  const psx = (pose.world[pi * 5 + 3] || 1e-5) / 100, psy = (pose.world[pi * 5 + 4] || 1e-5) / 100;
+  const a = (pr * Math.PI) / 180;
+  const dx = wx - px, dy = wy - py;
+  return {
+    x: (dx * Math.cos(a) - dy * Math.sin(a)) / psx,
+    y: (dx * Math.sin(a) + dy * Math.cos(a)) / psy,
+    rotation: wr - pr,
+    scaleX: wsx / psx,
+    scaleY: wsy / psy,
+  };
+}
+function setParentAt(child, parent, pose, gi, pi, sec) {
   const tr = child.tracks;
+  if (!tr.relativeTo || !tr.relativeTo.keyframes.length) tr.relativeTo = { keyframes: [{ sec: 0, value: "", ease: "Step", id: makeKFID() }] };
+  setKey(child, "relativeTo", sec, parent ? parent.name : "", { ease: "Step", exact: true });
+  for (const k of ["followPos", "followRot", "followScale"]) if (!tr[k] || !tr[k].keyframes.length) tr[k] = { keyframes: [{ sec: 0, value: 1, ease: "Step", id: makeKFID() }] };
+  if (tr.relativeTo.keyframes.every((k) => !k.value)) {
+    delete tr.relativeTo;
+    delete tr.followPos;
+    delete tr.followRot;
+    delete tr.followScale;
+  }
+  if (!pose) return;
+  const NS = pose.num.length / pose.n;
+  const local = parentCompensation(pose, gi, parent ? pi : -1);
+  for (const k of XFORM_KEYS) {
+    if (!tr[k] || !tr[k].keyframes.length) setKey(child, k, 0, round6(pose.num[gi * NS + slotOf(k)]), { exact: true });
+    setKey(child, k, sec, round6(local[k]), { ease: "Step", exact: true });
+  }
+}
+function setParent(doc, child, parent, pose, gi, pi, sec = 0) {
+  const tr = child.tracks;
+  const keyedLater = tr.relativeTo && tr.relativeTo.keyframes.some((k) => k.sec > EPS_SEC);
+  if (sec > EPS_SEC || keyedLater) return setParentAt(child, parent, pose, gi, pi, sec);
   const simple = ["x", "y", "rotation", "scaleX", "scaleY"].every((k) => !tr[k] || tr[k].keyframes.length <= 1);
   const world = pose ? { x: pose.world[gi * 5], y: pose.world[gi * 5 + 1], r: pose.world[gi * 5 + 2], sx: pose.world[gi * 5 + 3], sy: pose.world[gi * 5 + 4] } : null;
   if (!parent) {
@@ -6398,7 +6436,7 @@ class Editor {
     const parent = parentName ? st.group(parentName) : null;
     if (!child) return;
     const pose = st.currentPose();
-    st.mutate(parent ? `Parent to ${parent.name}` : "Unparent", (doc) => setParent(doc, child, parent, pose, st.groupIndex(childName), parent ? st.groupIndex(parentName) : -1));
+    st.mutate(parent ? `Parent to ${parent.name}` : "Unparent", (doc) => setParent(doc, child, parent, pose, st.groupIndex(childName), parent ? st.groupIndex(parentName) : -1, st.sec));
     toast(parent ? `"${childName}" now follows "${parentName}"` : `"${childName}" unparented`);
   }
   reorderPart(name, targetName, above) {
